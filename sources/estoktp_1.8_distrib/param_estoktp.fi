@@ -1,0 +1,5 @@
+      parameter (ntaumx=10, nhindmx=10,  nmdmx=300, natommx=100, ndim=3)
+      parameter (nmethmx=10, nelecmx=10)
+      parameter (ntempmx=100, noptmx=100, noptmdmx=36)
+      parameter (nircmx=1000)
+

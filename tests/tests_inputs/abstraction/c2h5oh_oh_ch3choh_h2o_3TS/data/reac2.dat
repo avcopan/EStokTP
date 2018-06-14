@@ -1,0 +1,32 @@
+ nosmp dthresh ethresh
+ 1, 1.0, 0.00001
+ 
+ ntau
+ 0
+ -->taumn,taumx
+
+ nhind
+ 0
+ -->namehind,hindmn,hindmx,hindstep 
+
+ natom natomt lin nidex
+ 2 2 0
+
+ charge  spin atomlabel
+ 0  2
+ o21
+ h21 o21 d21
+
+
+ intcoor
+ d21  1.0
+
+ SymmetryFactor
+ 1.
+
+
+ nelec
+ 2
+ 0.  2
+ 140. 2
+ end
