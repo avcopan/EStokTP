@@ -6,16 +6,15 @@ to perform electronic structure calculations and master equation simulations.
 
 ## Acknowledgment
 
-This material is based in part on work supported by the U.S. Department of
-Energy, Office of Science, Office of Basic Energy Sciences, Division of Chemical
-Sciences, Geosciences, and Biosciences under contract no. DE-AC02-06CH11357.
-The development of this code is also supported by the Exascale Computing Project
-(ECP), Project Number: 17-SC-20-SC, a collaborative effort of two DOE
-organizations, the Office of Science and the National Nuclear Security
+This work was supported by the U.S. Department of Energy, Office of Basic Energy
+Sciences, Division of Chemical Sciences, Geosciences, and Biosciences under DOE
+Contract Number DE-AC02-06CH11357 as well as the Exascale Computing Project
+(ECP), Project Number: 17-SC-20-SC.  The ECP is a collaborative effort of two
+DOE organizations, the Office of Science and the National Nuclear Security
 Administration, responsible for the planning and preparation of a capable
 exascale ecosystem including software, applications, hardware, advanced system
 engineering, and early test bed platforms to support the nation's exascale
-computing imperative.
+computing imperative. 
 
 ## Notice
 
