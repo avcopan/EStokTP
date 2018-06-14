@@ -1,0 +1,12 @@
+#!/bin/sh
+
+ESTOKTPDIR=/home/carlo/programs/estoktp
+BINDIR=/home/carlo/bin
+
+ln -s $ESTOKTPDIR/exe/run_estoktp.com  $BINDIR
+ln -s $ESTOKTPDIR/exe/extract_data_projrot.sh  $BINDIR
+ln -s $ESTOKTPDIR/exe/RPHt.exe   $BINDIR
+ln -s $ESTOKTPDIR/exe/estoktp.x   $BINDIR
+
+
+
