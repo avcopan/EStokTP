@@ -18,7 +18,7 @@ computing imperative.
 
 ## Notice
 
-Copyright (C) 2018 by Carlo Cavallotti (carlo.cavallotti@polimi.it) and Matteo
+Copyright (c) 2018 by Carlo Cavallotti (carlo.cavallotti@polimi.it) and Matteo
 Pelucchi, Politecnico di Milano, Italy and Stephen J. Klippenstein
 (sjk@anl.gov), Argonne National Laboratories, USA.
 
