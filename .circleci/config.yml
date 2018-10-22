@@ -1,0 +1,18 @@
+version: 2
+jobs:
+    build:
+        docker:
+            - image: circleci/buildpack-deps:18.04
+        steps:
+            - checkout
+            - run: 
+                name: Build from source
+                command: |
+                    sudo apt-get install cmake gfortran libopenblas-dev
+                    cmake .
+                    make
+workflows:
+    version: 2
+    build-all:
+        jobs:
+            - build
