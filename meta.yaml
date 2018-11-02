@@ -1,0 +1,19 @@
+package:
+    name: estoktp
+    version: 0.1.0
+
+source:
+    path: .
+
+requirements:
+    build:
+        - cmake
+        - {{ compiler('c') }}
+        - {{ compiler('fortran') }}
+    host:
+        - blas
+        - openblas # [linux]
+    run:
+        - blas
+        - openblas # [linux]
+        - mess
