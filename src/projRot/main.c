@@ -1,16 +1,10 @@
 /******************************************************************************
  * April 2016
  *
+ * Daniela Polino
+ * Carlo Cavallotti
  * projection of hindred rotors
  * tunneling and coupling constants through RPH - SCT theories
- Copyright (C) 2018  by Carlo Cavallotti Politecnico di MIlano, Italy
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, version 3 of the License
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
  * 
  *****************************************************************************/
 #include "RPHt.h"
@@ -225,10 +219,7 @@ int main(void) {
 	fprintf(freq_orig_results, "\n");
       }
 
-
-    // here we have two alternatives RPH of MHA or Rotor Projection as implemented 
-    // by W.H.Green et al. (MIT) in Cantherm (http://rmg.mit.edu/)
-
+    //    here we have two alternatives RPH of MHA or Rotor Projection as implemented by Green et al. in Cantherm
     // the code terminates if we use the Rotor projection
 
       if(onlyrotors==0){
@@ -2236,9 +2227,7 @@ double **invert_inertia_matrix( double **matrix, int dim, double **inverse_matri
 
 void projector_matrix_Rot(int step){
 
-  //Projector matrix implemented as described 
-  // by W.H.Green et al. (MIT) in Cantherm (http://rmg.mit.edu/)
-
+  //Projector matrix implemented as described by Green in Cantherm to project rotors
 
   int i,j,k,ik;
   double **I_temp;

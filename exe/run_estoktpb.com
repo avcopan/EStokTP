@@ -47,10 +47,10 @@ echo "$HOST" > host.dat
 
 
 # bash command
-#  exec $SSH -n $HOST "cd `pwd`; export PATH=$PATH:~/bin; estoktp.x >& estoktp.log & "
+  exec $SSH -n $HOST "cd `pwd`; export PATH=$PATH:~/bin; export GFORTRAN_UNBUFFERED_ALL=Y; estoktp.x >& estoktp.log & "
 
 # csh tcsh comman
-  exec $SSH -n $HOST "cd `pwd`; setenv PATH $PATH:~/bin;setenv GFORTRAN_UNBUFFERED_ALL Y; estoktp.x >& estoktp.log & "
+#  exec $SSH -n $HOST "cd `pwd`; setenv PATH $PATH:~/bin; estoktp.x >& estoktp.log & "
 
 
 
