@@ -533,9 +533,14 @@ c               write(*,*) 'working on that'
                write(*,*)'iat2 ', iat2
                write(*,*)'ang1 is ',ang
                write(*,*)'j is ',j
-               if(ibconn(j+1).eq.ibconn(j).and.iaconn(j+1).eq.j)then
+               jind=j
+               icheckang=0
+               do jind=j+1,natomt
+                 if(ibconn(jind).eq.ibconn(j).and.iaconn(jind).eq.j)then
                   write(*,*)'recognized 2 successive ang dihedral def'
-                  iat3=j+1
+                  icheckang=1
+c                  iat3=j+1
+                  iat3=jind
                   write(*,*)'iat3 ', iat3
                   icorr=0
                   do jk=1,iat3-1
@@ -544,19 +549,24 @@ c               write(*,*) 'working on that'
                   iat3=iat3-icorr
                   write(*,*)'iat3 ', iat3
                   do ij=1,nint
-                     if(intcoor(ij).eq.anname(j+1))then
+c                     if(intcoor(ij).eq.anname(j+1))then
+                     if(intcoor(ij).eq.anname(jind))then
                         write (*,*)'failed to recog dummy 2 ang conf'
                         write (*,*)'stopping now'
                         stop
                      endif
                   enddo
                   open (unit=99,status='unknown')
-                  write (99,*) anname(j+1)
+c                  write (99,*) anname(j+1)
+                  write (99,*) anname(jind)
                   rewind (99) 
                   read(99,*) ang2
                   close(99)
 c                  write(*,*)'ang2 is ',ang2
-               else
+                 endif
+               enddo
+
+               if(icheckang.eq.0)then
                   write (*,*)'failed2 to recog dummy 2 ang conf'
                   write (*,*)'stopping now'
                   stop

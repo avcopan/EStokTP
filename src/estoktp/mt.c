@@ -42,6 +42,7 @@
 */
 
 #include <stdio.h>
+#include<stdlib.h>
 
 /* Period parameters */  
 #define N 624
@@ -195,7 +196,27 @@ void mtgetseed_ (unsigned long *s)
 
 void mtinit_ (void)
 {
-	init_genrand(time(NULL)+getpid());
+
+  unsigned long seed;
+  //  unsigned long seed1;
+  //  unsigned long seed2;
+  FILE *start_seed;
+
+	seed=time(NULL)+getpid();
+	//	seed1=time(NULL);
+	//	seed2=getpid();
+	if((start_seed=fopen("start_seed.log","w"))==NULL) {
+	  printf("********can't open file %s*************\n","start_seed.log");
+	  	  exit(1);
+	}
+	fprintf(start_seed, "%ld\n",seed);
+	//	fprintf(start_seed, "%ld\n",seed1);
+	//	fprintf(start_seed, "%ld\n",seed2);
+	fclose(start_seed);
+	//	exit(0);
+	init_genrand(seed);
+
+	//	init_genrand(time(NULL)+getpid());
 }
     
 void mtinitbyint_ (const unsigned long* s) 

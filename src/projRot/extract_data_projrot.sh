@@ -68,7 +68,7 @@ rm -f geometries1.txt
 
 echo 'Number_of_Atoms:        ' $Atoms > temp.log
 
-cat temp.log hind_rot_head.dat hrdata4proj.dat geom.txt grad.txt force_constants.txt > RPHt_input_data.dat
+cat temp.log data/hind_rot_head.dat hrdata4proj.dat geom.txt grad.txt force_constants.txt > RPHt_input_data.dat
 
 rm -f geom.txt
 rm -f grad.txt

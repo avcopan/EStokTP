@@ -31,7 +31,7 @@ do
     cat variational.me  var_$nstru.me > variational1.me
     cp -f variational1.me variational.me
 done
-#echo  " End" >> variational.me 
+echo  " End" >> variational.me 
 cp -f  variational.me ./me_files
 rm -f var_*.me
 rm -f  variational1.me

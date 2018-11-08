@@ -771,7 +771,7 @@ cc   if vdw or mmodred activated.
          open (unit=99,file='tmp.dat',status='unknown')
          read(99,*)cjunk,cjunk,iqclab
          if(iqclab.ne.'end')then
-            if(iqclab.eq.'internal') then 
+            if(iqclab.eq.'internal'.and.ired.eq.1) then 
                icsy=1
                icsy_term=1
                ired=2
@@ -799,7 +799,7 @@ c            read(99,*)cjunk,cjunk,iqclab
          read(99,*)cjunk,cjunk,iqclab
 c         write(*,*)'iqclab is ',iqclab
          if(iqclab.ne.'end')then
-            if(iqclab.eq.'Z-matrix') then 
+            if(iqclab.eq.'Z-matrix'.and.ired.eq.1) then 
                icsy=1
                icsy_term=1
                ired=2
@@ -1416,12 +1416,14 @@ c      stop
       return
       end
 
-      subroutine comline56_g09(ispecies,comline1,comline5,comline6)
+      subroutine comline56_g09(ispecies,comline1,comline2,comline5,
+     +   comline6)
 
       implicit double precision (a-h,o-z)
 
       character*30 gkeyword,igkey
       character*70 comline1
+      character*70 comline2
       character*70 comline5
       character*70 comline6
       character*120 command1
@@ -1434,17 +1436,63 @@ c      stop
 
       open(unit=99,file='temp.tmp',status='unknown')
       write(99,*)comline1
-      rewind(99)
-      call Lineread(99)
+      write(99,*)comline2
       close(99)
-      comline5=word
+      command1="sed -ie 's/=/ /g' temp.tmp"
+      call commrun(command1)
+
+      ifine=0
+      open(unit=99,file='temp.tmp',status='unknown')
+      call Lineread(99)
+      if(word.eq.'ULTRAFINE'.or.word.eq.'ULTRA')ifine=1
+      if(word2.eq.'ULTRAFINE'.or.word2.eq.'ULTRA')ifine=1
+      if(word3.eq.'ULTRAFINE'.or.word3.eq.'ULTRA')ifine=1
+      if(word4.eq.'ULTRAFINE'.or.word4.eq.'ULTRA')ifine=1
+      if(word5.eq.'ULTRAFINE'.or.word5.eq.'ULTRA')ifine=1
+      if(word6.eq.'ULTRAFINE'.or.word6.eq.'ULTRA')ifine=1
+      if(word7.eq.'ULTRAFINE'.or.word7.eq.'ULTRA')ifine=1
+
+      call Lineread(99)
+      if(word.eq.'ULTRAFINE'.or.word.eq.'ULTRA')ifine=1
+      if(word2.eq.'ULTRAFINE'.or.word2.eq.'ULTRA')ifine=1
+      if(word3.eq.'ULTRAFINE'.or.word3.eq.'ULTRA')ifine=1
+      if(word4.eq.'ULTRAFINE'.or.word4.eq.'ULTRA')ifine=1
+      if(word5.eq.'ULTRAFINE'.or.word5.eq.'ULTRA')ifine=1
+      if(word6.eq.'ULTRAFINE'.or.word6.eq.'ULTRA')ifine=1
+      if(word7.eq.'ULTRAFINE'.or.word7.eq.'ULTRA')ifine=1
+
+      close(99)
+
+
+      open(unit=99,file='temp.tmp',status='unknown')
+      if(ifine.eq.0)then
+         write(99,*)comline1
+         rewind(99)
+         call Lineread(99)
+         comline5=word
+      else if (ifine.eq.1)then
+c      rewind (99)
+         write(99,*)comline1
+         rewind(99)
+         call Lineread(99)
+         rewind(99)
+         write(99,100)word,' int=ultra'
+         rewind(99)
+         read(99,101)comline5
+      endif
+      close(99)
       write(*,*)'comline 5 is ',comline5
 c      stop
       if(ispecies.eq.0) then
-         comline6='opt(calcfc,ts,maxcycle=1) iop(7/33=1) guess=read'
-         else
-         comline6='opt(calcfc,maxcycle=1) iop(7/33=1) guess=read '
+         comline6='opt(calcfc,ts,maxcycle=1) iop(7/33=1) guess=read
+     $ geom=check'
+      else
+         comline6='opt(calcfc,maxcycle=1) iop(7/33=1) guess=read 
+     $ geom=check'
       endif
+
+ 100  format(A30,A20)
+ 101  format(A70)
 
       return
       end

@@ -5096,6 +5096,8 @@ cc read coordinate names
             ired=2
          endif
       endif
+      if(ispecies.eq.6.and.iadd.eq.1)ired=0
+      if(ispecies.eq.61.and.iadd.eq.1)ired=0
       
       write(*,*)'ilin is',ilin
 
@@ -5408,8 +5410,8 @@ c               write (119,*) eelec(ielec),gelec(ielec)
 c            enddo
 c            write (119,*) 'End '
          endif
-         if ((ispecies.eq.5).or.(ispecies.eq.6)) 
-     $    write (19,*) 'End'
+c         if ((ispecies.eq.5).or.(ispecies.eq.6)) 
+c     $    write (19,*) 'End'
          write (19,*) '!************************************'
 c        write (119,*) '!************************************'
 
@@ -7667,7 +7669,7 @@ cc    this is the multi dimensional hindered rotor section
       character*70 comline1,comline2,comline3,comline4,comsave1
       character*70 comline5,comline6,comlineref1
       character*70 comlineref2,comsave2
-      character*60 atomlabel(natommx)
+      character*60 atomlabel(natommx),atomlabel_save(natommx)
       character*4 atomname(natommx)
       character*4 atomconn(natommx)
       character*4 atomcoo(natommx)
@@ -8400,6 +8402,7 @@ c read level of theory for hindered rotor scan
          read (15,*) icharge,ispin
          do iatom = 1 , natomt
             read (15,'(A60)') atomlabel(iatom)
+            atomlabel_save(iatom)= atomlabel(iatom)
          enddo
          rewind(15)
 
@@ -8438,7 +8441,8 @@ cc now read theory lines for frequency calculations for multirotor analysis
          if(word.eq.'MHR_FREQS') then
             imhrfr=1
             if(ilev1code.eq.1)then
-               call comline56_g09(ispecies,comline1,comline5,comline6)
+               call comline56_g09(ispecies,comline1,comline2,comline5,
+     +                            comline6)
             endif
 c            read (21,'(A70)') comline5
 c            read (21,'(A70)') comline6
@@ -8548,29 +8552,34 @@ c     natomt is to account for dummy atoms
 
 cc get data from react2 file
 
-         open (unit=25,file='./data/reac2.dat',status='old')
+         if(iabs.eq.1.or.iadd.eq.1)then
+            open (unit=25,file='./data/reac2.dat',status='old')
 
-         do while (WORD.NE.'NTAU')
-            call LineRead (25)
-            if (WORD.EQ.'END') then
-               write (66,*) 'sampling coords of reac2 must be defined'
-               stop
-            endif
-         enddo
-         read (25,*) ntau2
-         rewind 25
+            do while (WORD.NE.'NTAU')
+               call LineRead (25)
+               if (WORD.EQ.'END') then
+                  write (66,*) 'define sampling coords of reac2'
+                  stop
+               endif
+            enddo
+            read (25,*) ntau2
+            rewind 25
 
 c     natomt is to account for dummy atoms
-         do while (WORD.NE.'NATOM')
-            call LineRead (25)
-            if (WORD.EQ.'END') then
-               write (66,*) 'natom must be defined'
-               stop
-            endif
-         enddo
-         read (25,*) natom2,natomt2
-         close (25)
-
+            do while (WORD.NE.'NATOM')
+               call LineRead (25)
+               if (WORD.EQ.'END') then
+                  write (66,*) 'natom must be defined'
+                  stop
+               endif
+            enddo
+            read (25,*) natom2,natomt2
+            close (25)
+         else
+            natom2=0
+            natomt2=0
+            ntau2=0
+         endif
          natom = natom1+natom2
          if (iadd.eq.1) then
             natomt = natomt1+natomt2
@@ -8628,7 +8637,8 @@ c               read (21,'(A70)') comline6
 c               write(*,*)'imhrf is ',imhrfr
 c               stop
                if(ilev1code.eq.1)then
-                 call comline56_g09(ispecies,comline1,comline5,comline6)
+                 call comline56_g09(ispecies,comline1,comline2,comline5,
+     +                comline6)
                endif
             endif
          else if(word2.eq.'MOLPRO')then
@@ -8658,6 +8668,7 @@ c now read z-mat input
          if (idebug.ge.2) write (6,*) ' starting gaussian input'
          do iatom = 1 , natomt
             read (17,'(A60)') atomlabel(iatom)
+            atomlabel_save(iatom)= atomlabel(iatom)
 c            write (6,*) atomlabel(iatom)
          enddo
 
@@ -8743,6 +8754,12 @@ cc 1D hindered rotor section
 cc scan each 1D hindered rotor at a time
 
 cc start hindered rotor scan: 
+
+
+      comsave1=comline1
+      comsave2=comline2
+      comlineref1=comline1
+      comlineref2=comline2
 
       write (16,*) '1D hindered_rotor ',ihind
 
@@ -8838,6 +8855,10 @@ cc start scan on nhind scan points
 
 c               stop
 c            write(*,*)'before g09'
+c            write(*,*)'comline 1 ',comline1
+c            write(*,*)'comline 2 ',comline2
+c            stop
+
             if(ilev1code.eq.1) then
 
                call g09fopt(tau,ntau,natom,natomt,numproc,gmem,
@@ -8952,11 +8973,16 @@ cc rewrite vectors
                if(ilev1code.eq.1) then
                   comline1=comline5
                   comline2=comline6
+                  atomlabel(1)=' '
+                  atomlabel(2)=' '
 
                   call g09fopt(tau,ntau,natom,natomt,numproc,gmem,
      $   coord,vtot_0,vtot,freq,ifreq,ilin,ismp,comline1,
      $   comline2,icharge,ispin,ircons,
      $    atomlabel,intcoor,bislab,tauopt,xint,abcrot,ires,ixyz,ired)
+
+                  atomlabel(1)= atomlabel_save(1)
+                  atomlabel(2)= atomlabel_save(2)
 
                else if (ilev1code.eq.2) then
                   command1='cp -f fcmat.log ./geom.log '
@@ -9090,7 +9116,7 @@ c      write (19,*) '    Frequencies[1/cm] ',nfreq
             endif
 
 
-            write (16,*) xint(ncoord),vtot         
+c            write (16,*) xint(ncoord),vtot         
 
             if(iscanhinda.le.ihalf) then
                xint(ncoord)= xstarta+ihind_stepa*iscanhinda
@@ -9420,11 +9446,16 @@ c                     xint(ncoord-1)=xstarta
                   if(ilev1code.eq.1) then
                      comline1=comline5
                      comline2=comline6
+                     atomlabel(1)=' '
+                     atomlabel(2)=' '
 
                      call g09fopt(tau,ntau,natom,natomt,numproc,gmem,
      $    coord,vtot_0,vtot,freq,ifreq,ilin,ismp,comline1,
      $    comline2,icharge,ispin,ircons,
      $    atomlabel,intcoor,bislab,tauopt,xint,abcrot,ires,ixyz,ired)
+
+                     atomlabel(1)= atomlabel_save(1)
+                     atomlabel(2)= atomlabel_save(2)
 
                   else if (ilev1code.eq.2) then
 
@@ -9992,12 +10023,17 @@ c     calculate hessian for optimized point
                   if(ilev1code.eq.1) then
                      comline1=comline5
                      comline2=comline6
+                     atomlabel(1)=' '
+                     atomlabel(2)=' '
 
                      call g09fopt(tau,ntau,natom,natomt,numproc,gmem,
      $                    coord,vtot_0,vtot,freq,ifreq,ilin,ismp,
      $                    comline1,comline2,icharge,ispin,ircons,
      $                    atomlabel,intcoor,bislab,tauopt,xint,abcrot,
      $                    ires,ixyz,ired)
+
+                     atomlabel(1)= atomlabel_save(1)
+                     atomlabel(2)= atomlabel_save(2)
 
                   else if (ilev1code.eq.2) then
 
@@ -12165,7 +12201,7 @@ cc here ends the cycle over the total number of IRC points
 
 cc determine the scaling factors for the HR potentials
 
-      if(hr_rescale.eq.'HRCC') then
+      if(hr_rescale.eq.'HRCC'.and.nhind.ne.0) then
 
          open (unit=99, status='unknown')
          write(99,*)hr_rescale2f
@@ -12475,7 +12511,7 @@ cc first we determine the activation energy using HL data
 
 cc then we determine the energies along the reaction path
 
-cc this is to be consistented with ME that does not include the 
+cc this is to be consistent with ME that does not include the 
 cc lowest eigenvalue of the HR in calculating the HR partition function
       
       nfreq=3*natom-1-6
@@ -13557,6 +13593,8 @@ c         rewind(15)
 c molpro z-mat file input from gaussian z-mat output
 
          if (code_name.eq.'MOLPRO')then   
+            command1='cp -f ./data/hl_molpro.dat ./hl_molpro.dat'       
+            call commrun(command1)
             call commrun(commandcopy)
             read (17,*)
             if(ispecies.eq.100.or.ispecies.eq.101)then
@@ -13776,7 +13814,106 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       include 'filcomm.f'
 
-cc first open files with energy and estimate forward and backward energy barriers
+
+cc before doing anything check and modify me files to have structures consistent with calculation type
+
+cc check on products
+      if(ip1.eq.1.and.ip2.eq.1)then
+         numend=0
+         command1='egrep End ./me_files/prod1_fr.me > tmp.log'
+         call commrun(command1)
+         command1='wc tmp.log > tmp1.log'
+         call commrun(command1)
+         open(unit=99,file='tmp1.log',status='unknown')
+         read(99,*)numend
+         close(99)
+         if(numend.eq.2)then
+            write(command1,5001)
+            call commrun(command1)
+         endif
+         numend=0
+         command1='egrep End ./me_files/prod2_fr.me > tmp.log'
+         call commrun(command1)
+         command1='wc tmp.log > tmp1.log'
+         call commrun(command1)
+         open(unit=99,file='tmp1.log',status='unknown')
+         read(99,*)numend
+         close(99)
+         if(numend.eq.3)then
+            write(command1,5002)
+            call commrun(command1)
+         endif
+         write(command1,5004) 
+         call commrun(command1)
+         write(command1,5007) 
+         call commrun(command1)
+         write(command1,5008) 
+         call commrun(command1)
+
+ 5001    format(" sed -ie '0,/End/{s/End/ /}' me_files/prod1_fr.me")
+ 5002    format(" sed -ie '0,/End/{s/End/ /}' me_files/prod2_fr.me")
+c         stop
+ 5004    format(" sed -ie 's/Species/Fragment Prod2/g'
+     +    me_files/prod2_ge.me")
+
+ 5007    format(" sed -ie 's/Well/Bimolecular/g'
+     +    me_files/prod1_ge.me")
+ 5008    format(" sed -ie 's/Species/Fragment PROD1/g'
+     +    me_files/prod1_ge.me")
+
+      endif
+
+cc check on single product
+
+      if(ipr1.eq.1)then
+         numend=0
+         command1='egrep End ./me_files/prod1_fr.me > tmp.log'
+         call commrun(command1)
+         command1='wc tmp.log > tmp1.log'
+         call commrun(command1)
+         open(unit=99,file='tmp1.log',status='unknown')
+         read(99,*)numend
+         close(99)
+         if(numend.eq.1)then
+cc add a line at the end fo the file
+            open(unit=99,file='tmp.log',status='unknown')
+            write(99,*)'End'
+            close(99)
+            command1='cat ./me_files/prod1_fr.me tmp.log > tmp1.log'
+            call commrun(command1)
+            command1='cp -f tmp1.log ./me_files/prod1_fr.me'
+            call commrun(command1)
+         endif
+         write(command1,5005)
+         call commrun(command1)
+         write(command1,5006)
+         call commrun(command1)
+         write(command1,5009)
+         call commrun(command1)
+         write(command1,5010)
+         call commrun(command1)
+
+      endif
+ 5003 format(" sed -ie '0,/End/{s/End/ /}' me_files/prod2_fr.me")
+ 5005 format(" sed -ie 's/Bimolecular/Well/g'
+     +    me_files/prod1_ge.me")
+ 5006 format(" sed -ie 's/Fragment PROD1/Species/g'
+     +    me_files/prod1_ge.me")
+ 5009 format(" sed -ie 's/TS REACS WP/TS REACS PRODS/g'
+     +    me_files/ts_ge.me")
+ 5010 format(" sed -ie 's/TS REACS WP/TS REACS PRODS/g'
+     +    me_files/variational.me")
+
+
+c      endif
+
+cc this is to be continued to solve for reac1 and reac2 ambiguities when imported
+cc from previous calculations
+
+c      stop
+
+
+cc now open files with energy and estimate forward and backward energy barriers
 
       open (unit=107, file='./me_files/reac1_en.me', status='old')
       read (107,*) reac1_en
@@ -14356,17 +14493,26 @@ cc save the products block as bimol2
          read (99,1120) command1
          call commrun(command1)
          rewind (99)
-         write (99,1260) prod_en
- 1260     format(" sed -e 's/\$proden/",1X,F7.2,1X,
-     +        "/' products0.me > products.me")
+         write (99,1261) 
          rewind (99)
          read (99,1120) command1
          call commrun(command1)
+         rewind (99)
+         write (99,1260) prod_en 
+         rewind (99)
+         read (99,1120) command1
+         call commrun(command1)
+
+ 1260     format(" sed -e 's/\$proden/",1X,F7.2,1X,
+     +        "/' products0.me > products.me")
+ 1261    format(" sed -ie 's/ZeroEnergy\[kcal\/mol\]             0./
+     + ZeroEnergy[kcal\/mol] \$proden/' products0.me ")
 
 cc save the products block as prod1_iso 
 
          command1='cp -f products.me ./me_blocks/prod1_iso.me'
          call commrun(command1)
+c         stop
       endif
 
       rewind (99)
@@ -14474,8 +14620,13 @@ cc save wellp if not fake
       endif
 
       rewind (99)
-      write (99,350)
+      if(ipw.ne.0)then
+         write (99,350)
+      else
+         write (99,351)
+      endif
  350  format ("cat wellr.me wellp.me > wells.me")
+ 351  format ("cat wellr.me > wells.me")
       rewind (99)
       read (99,1120) command1
       call commrun(command1)
@@ -15120,6 +15271,12 @@ cccccccccccccccccccccc
                rewind (99)
                read (99,1120) command1
                call commrun(command1)
+            else if (ipr1.eq.1)then
+               rewind (99)
+               write (99,1027) 
+               rewind (99)
+               read (99,1120) command1
+               call commrun(command1)
             else
                rewind (99)
                write (99,1026) 
@@ -15135,6 +15292,8 @@ cccccccccccccccccccccc
             call commrun(command1)
  1026       format(" sed -ie 's/Barrier TS REACS WP/
      +   Barrier B2 WR WP/g' temp3.me")
+ 1027       format(" sed -ie 's/Barrier TS REACS WR/
+     +   Barrier B2 WR PRODS/g' temp3.me")
          endif
       endif
 
@@ -15158,7 +15317,13 @@ c finally ready to write full me input and run mess
       endif
       if ((nts.eq.1).and.(ibeta.eq.1)) write (99,1016)
       if ((iabs.eq.1).and.(nts.eq.2)) write (99,1012)
-      if ((iadd.eq.1).and.(nts.eq.2)) write (99,1013)
+      if ((iadd.eq.1).and.(nts.eq.2)) then
+         if (ipr1.eq.1)then
+            write (99,1018)
+         else
+            write (99,1013)
+         endif
+      endif
       if (nts.eq.3) write (99,1014)
       rewind (99)
       read (99,1120) command1
@@ -15184,6 +15349,9 @@ c finally ready to write full me input and run mess
 
  1013 format ("cat ./data/me_head.dat ./reactants.me 
      +  ./wells.me ./rpst.me 
+     +  ./temp3.me > me_ktp.inp")
+ 1018 format ("cat ./data/me_head.dat ./reactants.me 
+     +  ./wells.me ./products.me ./rpst.me 
      +  ./temp3.me > me_ktp.inp")
 
  1014 format ("cat ./data/me_head.dat ./reactants.me 
@@ -15374,6 +15542,15 @@ c start with dummy atom for abstraction case
             REWIND (99)
             read (99,'(A60)') atomlabel(iatom)
             close (unit=99,status='keep')
+         else if(natom1.eq.2.and.natomt1.eq.3)then
+            OPEN (unit=99,status='unknown')
+            REWIND (99)
+            write (99,1903) 'X111',isite,'2.',jsite,'90.',ksite,
+     $    '180.'
+ 1903       format (a4,1x,i4,1x,a2,1x,i4,1x,a3,1x,i4,1x,a4)
+            REWIND (99)
+            read (99,'(A60)') atomlabel(iatom)
+            close (unit=99,status='keep')
          endif
       endif
 
@@ -15415,13 +15592,19 @@ c        if (iatom.eq.natomt1+2) then
                if(natom1.eq.2.and.natomt1.eq.2) then
                   write (99,2601) word,isite,'rts',natomt1+1,
      $               'aabs1',jsite,'180.'
+               else if(natom1.eq.2.and.natomt1.eq.3) then
+                  write (99,2601) word,isite,'rts',natomt1+1,
+     $               'aabs1',jsite,'180.'
                else
                   write (99,2601) word,isite,'rts',natomt1+1,
      $               'aabs1',jsite,'babs1'
                endif
             endif
             if (iadd.eq.1) then 
-               if(natom1.eq.2.and.natom1t.eq.2) then
+               if(natom1.eq.2.and.natomt1.eq.2) then
+                  write (99,2601) word,isite,'rts',jsite,
+     $       'aabs1',ksite,'180.'
+               else if (natom1.eq.2.and.natomt1.eq.3) then
                   write (99,2601) word,isite,'rts',jsite,
      $       'aabs1',ksite,'180.'
                else
@@ -15454,6 +15637,8 @@ c        if (iatom.eq.natomt1+3) then
             endif
             if (iadd.eq.1) then
                if(natom2.eq.2.and.natomt2.eq.3)then
+c                  write(*,*)'passing here'
+c                  write(*,*)'stop'
                   write (99,2602) word,word2,word3,isite,
      $       ' 90. ',jsite,'babs2'
                else
@@ -15495,7 +15680,8 @@ c    $       isite,'babs3'
       if (natom2.eq.1) natomtp = natomtp+3
       if (natom2.eq.2) natomtp = natomtp+1
       if (natom1.eq.2) natomtp = natomtp+1
-
+c      write(*,*)'natomtp is',natomtp
+c      stop
 cc now read remaining atom labels for react2
       if (natom2.ne.1) then
          do while (WORD.NE.'INTCOOR')
@@ -15539,7 +15725,12 @@ c            write (*,*) intcoor(natom1p+itau-ntau1),taumn,taumx
       enddo
 
       if (natom2.eq.1) then
-         if(natom1.eq.2.and.natom1t.eq.2)then
+         if(natom1.eq.2.and.natomt1.eq.2)then
+            xinti(natomtp+1) = aabs1
+            xinti(natomtp+2) = rts
+            intcoor(natomtp+1) = 'AABS1'
+            intcoor(natomtp+2) = 'RTS'
+         else if(natom1.eq.2.and.natomt1.eq.3)then
             xinti(natomtp+1) = aabs1
             xinti(natomtp+2) = rts
             intcoor(natomtp+1) = 'AABS1'
@@ -15553,8 +15744,20 @@ c            write (*,*) intcoor(natom1p+itau-ntau1),taumn,taumx
             intcoor(natomtp+3) = 'RTS'
          endif
       endif
+c      write(*,*)'test'
+c      write(*,*) 'intcoor ', intcoor(natomtp+2)
+c      STOP
       if (natom2.eq.2) then
-         if(natom1.eq.2.and.natom1t.eq.2)then
+         if(natom1.eq.2.and.natomt1.eq.2)then
+            xinti(natomtp+1) = aabs1
+            xinti(natomtp+2) = aabs2
+            xinti(natomtp+3) = babs2
+            xinti(natomtp+4) = rts
+            intcoor(natomtp+1) = 'AABS1'
+            intcoor(natomtp+2) = 'AABS2'
+            intcoor(natomtp+3) = 'BABS2'
+            intcoor(natomtp+4) = 'RTS'
+         else if(natom1.eq.2.and.natomt1.eq.3)then
             xinti(natomtp+1) = aabs1
             xinti(natomtp+2) = aabs2
             xinti(natomtp+3) = babs2
@@ -15588,7 +15791,7 @@ c            write (*,*) intcoor(natom1p+itau-ntau1),taumn,taumx
          endif
       endif
       if (natom2.ge.3) then
-         if(natom1.eq.2.and.natom1t.eq.2)then
+         if(natom1.eq.2.and.natomt1.eq.2)then
             xinti(natomtp+1) = aabs1
             xinti(natomtp+2) = aabs2
             xinti(natomtp+3) = babs2
@@ -15651,7 +15854,7 @@ c      stop
                endif
             endif
          enddo
-cc now substitute variable dname(j) with babs2 and change atom labels
+cc now substitute variable dname(j) with aabs2 and change atom labels
          open (unit=99,status='unknown')
          write(99,*)dname(isub)
          rewind(99)
@@ -15674,16 +15877,17 @@ cc
          rewind(99)
          read (99,'(A60)') atomlabel(iatomi+1)
 c         write(*,*)'new atom label 1', atomlabel(iatomi+1)
+c         close(99)
+c         open (unit=99,status='unknown')
          rewind(99)
          write (99,*) atomlabel(isub)
-         REWIND (99)
-         call LineRead (99)
+         REWIND(99)
+         call LineRead3 (99)
          rewind(99)
          write (99,2604) word,word2,word3,word4,
      $       word5,word6,'aabs2'
          rewind(99)
          read (99,'(A60)') atomlabel(isub)         
-         close(99)
       endif
  2604 format (1x,3a7,1x,a7,1x,a7,1x,a7,1x,a7)
 
@@ -16268,6 +16472,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       character*2 atomlabel(natommx)
       character*2 aname
       character*30 cjunk
+      character*30 gmem
 
       include 'filcomm.f'
 
