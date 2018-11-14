@@ -12,4 +12,9 @@ fi
 
 make VERBOSE=1
 make install
-cp $RECIPE_DIR/exe/*.com $PREFIX/bin/.
+cp $RECIPE_DIR/exe/assemble_var.com        $PREFIX/bin/.
+cp $RECIPE_DIR/exe/get_files.com           $PREFIX/bin/.
+cp $RECIPE_DIR/exe/run_estoktpb.com        $PREFIX/bin/.
+cp $RECIPE_DIR/exe/run_estoktp.com         $PREFIX/bin/.
+cp $RECIPE_DIR/exe/run_estoktp_example.com $PREFIX/bin/.
+cp $RECIPE_DIR/exe/extract_data_projrot.sh $PREFIX/bin/.
