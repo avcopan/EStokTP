@@ -1,8 +1,9 @@
 # EStokTP 
 ## Electronic Structure to k(T, P) 
 
-This is a program to generate rate constants relying on calls to external codes
-to perform electronic structure calculations and master equation simulations.
+This is a program to automatically generate rate constants from a specification of 
+reactants, reacting site, and ab initio TST methodology. It relies on calls to 
+external codes to perform electronic structure, TST, and master equation calculations.
 
 ## Acknowledgment
 
