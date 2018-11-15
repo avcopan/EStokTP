@@ -5510,6 +5510,8 @@ c            write (120,*) ' 0.'
                   write (19,*) ' ZeroEnergy[kcal/mol]             0.'
                else if(ipr1.eq.1.and.ispecies.eq.3) then
                   write (19,*) ' ZeroEnergy[kcal/mol]      $proden'
+               else if(ipr1.eq.1) then
+                  write (19,*) ' ZeroEnergy[kcal/mol]             0.'
                endif
             endif
             if (ispecies.eq.5) 
