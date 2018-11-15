@@ -36,6 +36,7 @@ double deltas;//=0.0104;
 int E_dim=150000;
 int NpointsInt;
 int rearrange;
+int intcoord;
 int dsmethod;
 int saddlepbkf;
 int saddlep;
@@ -44,6 +45,7 @@ double Maxtdev;
 int stepmin;
 int isctvtst;
 int izct;
+int brows,bcolumns;
 double redmu;
 double iminfreq;
 
@@ -52,11 +54,22 @@ double angular_velocity_x , angular_velocity_y, angular_velocity_z;
 int onlyrotors, numrotors;
 int  *pivotA, *pivotB, *numatomsintopA;
 int **atomsintopA;
+int **atomsintopB;
+int **igroupA;
+int **igroupB;
 
 
 double dt;
 double **distance;
 double **force_constants;
+double **Bmat;
+double **Amat;
+double **Gmat;
+double **ABLmat;
+double ***Cmat;
+double **Lcartint;
+double *Freqint;
+
 int bonds_number;
 int bonds_angle_number;
 int dihedral_angle_number;
@@ -253,7 +266,11 @@ typedef struct {
 
 internal_coordinates_struct* internal_coordinates;
 
-void reading_inputfile ();
+void read_inputfile ();
+void read_Bmat_Cmat ();
+void calc_Amat ();
+void intcoord_hessian(double **FC, double *grad);
+void determine_top_atoms ();
 void read_VaG_mueff ();
 void allocation( int dim );
 void convert_coordinates_to_bohr(int step);
@@ -274,6 +291,7 @@ void projector_matrix_Rot(int step);
 void mass_weight_coordinates(int step);
 double **prod_mat(double **A, double **B, int dim);
 double **prod_mat2(double **A, int dim1, int dim2, double **B, int dim3, int dim4);
+double **invert_matrix(double **A, int dim);
 double **transpose_double(double**A, int l_side, int h_side,double **B);
 double dot_prod(double *v1,double *v2, int dim);
 void calc_reaction_coordinate_direction_vector(int step);
@@ -285,9 +303,9 @@ void tred2(double **a, int n, double d[], double e[]);
 void tqli(double d[], double e[], int n, double **z);
 double **inverse_matrix(double **a, int n, double **inv);
 double ** force_constants_mass_unweight(double **FC);
-void reading_pesrxfile ();
-void reading_pesfile ();
-void reading_rxfile ();
+void read_pesrxfile ();
+void read_pesfile ();
+void read_rxfile ();
 //void reading_newpes_file ();
 void write_traj();
 void smooth_hess();
@@ -298,7 +316,7 @@ double *calc_transmission_coeff(double *mueff,int Emax, double *Transmission_coe
 double find_sl_match(double E, double dstep);
 double find_sr_match(double E, double dstep);
 double integrate_function(int Efirst, int Elast, double *function);
-//void reading_mueff_file (FILE *fp);
+//void read_mueff_file (FILE *fp);
 void deriv_position(void);
 double trapzd(double *x,double *function,double *function2, int a,int b,int n, double olds, double s);
 int max(int a, int b);

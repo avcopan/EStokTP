@@ -91,7 +91,6 @@ void ludcmp(double **a, int n, int *indx, double d)
       }
      }                                     //Go back for the next column in the reduction.
 
-  printf("I am here 4   \n");
 
   free_vector(vv,1,n);
 }

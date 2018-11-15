@@ -1,11 +1,12 @@
-/******************************************************************************
- * April 2016
+ /******************************************************************************
+ * November 2018
  *
  * Daniela Polino
  * Carlo Cavallotti
  * projection of hindred rotors
  * tunneling and coupling constants through RPH - SCT theories
- * 
+ * internal coordinates Hessian conversion 
+ *
  *****************************************************************************/
 #include "RPHt.h"
 #include "nrutil.h"
@@ -77,21 +78,30 @@ int main(void) {
   //Reading input files: RPHt_input.dat, RPHt_PES.dat, Rx_coord.txt
   //the hessian and gradient inputs must be in Hartree/Bohr^2 and Hartree/Bohr (not mass weighted)
 
-  reading_inputfile();
- 
-
+  read_inputfile();
+  // choice for computation of average centrifigual component
+  // 0 = SCT
+  // 1 = RPH or similar (to be checked)
+  dsmethod=0;
 
   if(onlyrotors==1){
-
-    reading_pesrxfile();
-    
-    //    reading_rxfile();
-
+    read_pesrxfile();    
     write_traj();
-
   }
+
+
+  if(intcoord==1){
+    read_Bmat_Cmat();
+    calc_Amat();
+  }
+
+  //  printf("last value out %lf\n",Cmat[brows-1][bcolumns-1][bcolumns-1]);
+  //  printf("last value Amatrix %lf\n",Amat[bcolumns-1][brows-1]);
+  //  exit(0);
+
+
   
-  //  reading_newpes_file();
+  //  read_newpes_file();
 
   // save trajectories in xyz format redable by VMD and Molden
 
@@ -130,37 +140,49 @@ int main(void) {
     K[step]=0;
   }
 
+
+
+
   //**** beginning of cycle over different input structures (steps)****
 
   // open output files for the step cycle
 
-  if(onlyrotors==1){
+  //  if( onlyrotors==1 || MAXSTEP==1) {
 
-    if((freq_results1=fopen("freqs1.txt","w"))==NULL) {
-      printf("********IMPOSSIBILE APRIRE IL FILE %s*************\n","freqs1.txt");
-      exit(1);
-    }
-  
-    if((L_orig_save=fopen("L_orig_save.txt","w"))==NULL) {
-      printf("********IMPOSSIBILE APRIRE IL FILE %s*************\n","L_orig_save.txt");
-      exit(1);
-    }
-
-    if((Cart_displ=fopen("Cart_displ.txt","w"))==NULL) {
-      printf("********IMPOSSIBILE APRIRE IL FILE %s*************\n","Cart_displ.txt");
-      exit(1);
-    }
-
-    if((freq_orig_results=fopen("freqs_orig.txt","w"))==NULL) {
-      printf("********IMPOSSIBILE APRIRE IL FILE %s*************\n","freqs_orig.txt");
-      exit(1);
-    }
-
-    if((freq_results=fopen("freqs.txt","w"))==NULL) {
-      printf("********IMPOSSIBILE APRIRE IL FILE %s*************\n","freqs.txt");
-      exit(1);
-    }
+  if((freq_results1=fopen("freqs1.txt","w"))==NULL) {
+    printf("********IMPOSSIBILE APRIRE IL FILE %s*************\n","freqs1.txt");
+    exit(1);
   }
+  
+  if((L_orig_save=fopen("L_orig_save.txt","w"))==NULL) {
+    printf("********IMPOSSIBILE APRIRE IL FILE %s*************\n","L_orig_save.txt");
+    exit(1);
+  }
+
+  if((Cart_displ=fopen("Cart_displ.txt","w"))==NULL) {
+    printf("********IMPOSSIBILE APRIRE IL FILE %s*************\n","Cart_displ.txt");
+    exit(1);
+  }
+
+  if((freq_orig_results=fopen("freqs_orig.txt","w"))==NULL) {
+    printf("********IMPOSSIBILE APRIRE IL FILE %s*************\n","freqs_orig.txt");
+    exit(1);
+  }
+
+  if((freq_results=fopen("freqs.txt","w"))==NULL) {
+    printf("********IMPOSSIBILE APRIRE IL FILE %s*************\n","freqs.txt");
+    exit(1);
+  }
+  if((Km_res=fopen("Km_res.txt","w"))==NULL) {
+    printf("********IMPOSSIBILE APRIRE IL FILE %s*************\n","Km_res.txt");
+    exit(1);
+  }
+	if((anim_freq=fopen("anim_freq.xyz","w"))==NULL) {
+	  printf("********IMPOSSIBILE APRIRE IL FILE %s*************\n","anim_freq.txt");
+	  exit(1);
+	}
+
+    //  }
 
   //the purpose of the cycle is the diagonalization of the Hessian and its projection
 
@@ -184,8 +206,15 @@ int main(void) {
     // don't use, this function must be checked; it has been check it works now
     //coordinates_in_principal_axes(step);
 
+
     //mass weight the Hessian and initialize mass vector
       Hessian[step]=force_constants_mass_weight(Hessian[step]);
+
+      //this is the call to internal coords used for MDtunnel
+      //for the only rotor call it is redundant
+      if(intcoord==1){
+	intcoord_hessian(Hessian[step],gradient[step]);
+      } 
 
     //diagonalize mass weighted hessian
 
@@ -223,7 +252,21 @@ int main(void) {
     // the code terminates if we use the Rotor projection
 
       if(onlyrotors==0){
-	projector_matrix_Rot(step);
+	determine_top_atoms(step);
+	if(intcoord==1){
+	  intcoord_hessian(Hessian[step],gradient[step]);
+	  for(i=0;i<(dim);i++){ free (Lcartint[i]);}free(Lcartint);
+	  free(Freqint);
+	  projector_matrix_Rot(step);
+	} else {
+	  projector_matrix_Rot(step);
+	} 
+	fclose(anim_freq);
+	fclose(L_orig_save);
+	fclose(freq_results);
+	fclose(freq_orig_results);
+	fclose(Cart_displ);
+	fclose(Km_res);
 	exit(0);
       } 
 
@@ -231,6 +274,7 @@ int main(void) {
     //P used as Project=I-P as defined by MHA in equation 1.5b
     //Miller,Handy, and Adams J. Chem. Phys. vol.72 p90 (1980) 
     
+
       double **Project;
       Project=(double **) malloc( dim*sizeof(double *) );
       for(j=0; j < dim; j++) {
@@ -238,7 +282,6 @@ int main(void) {
       } 
 
       Project=projector_matrix(Project,step);
-
     
     // NB from now on coordinates are mass weighted
 
@@ -257,13 +300,27 @@ int main(void) {
   
     // save Hessian
 
+      // Cartesian Coordinates
       for(j=0;j<(int)(dim);j++){
 	for(i=0;i<(int)(dim);i++){
 	  L_int_save[step][i][j]=L_int[i+1][j+1];      
 	}
       } 
+      //if internal coordinates then a part of the Eigenector is replaced for 3N-6 coordinates
+      //with the internal Eigenvectors
+      //NB there is no check that the order is maintained
+
+      if(intcoord==1){
+	for(j=0;j<(int)(dim-6);j++){
+	  for(i=0;i<(int)(dim);i++){
+	    L_int_save[step][i][j]=Lcartint[i][j];      
+	  }
+	} 
+      for(i=0;i<(dim);i++){ free (Lcartint[i]);}free(Lcartint);
+      } 
 
     //compute and print cartesian displacements
+
 
       double **cart_displ;
       double **mass_matr;
@@ -293,20 +350,65 @@ int main(void) {
 	for(j=0;j<(int)(dim);j++){
 	  for(i=0;i<(int)(dim);i++){	
 	    //	fprintf(Cart_displ,"%lf\t",cart_displ[j][i]);fflush(0);
-	    fprintf(Cart_displ,"%lf\t",cart_displ[j][i]);fflush(0);
+	    //	    	    fprintf(Cart_displ,"%lf\t",L_int_save[step][j][i]);
+	    //	    fprintf(Cart_displ,"%8.3g ",temp2[j][i]);fflush(0);
+	    fprintf(Cart_displ,"%8.3g ",cart_displ[j][i]);fflush(0);
 	  }  
 	  fprintf(Cart_displ,"\n");
 	}
 	fprintf(Cart_displ,"\n");
+	/*
+	for(j=0;j<(int)(dim);j++){
+	  for(i=0;i<(int)(dim);i++){	
+	    //	fprintf(Cart_displ,"%lf\t",cart_displ[j][i]);fflush(0);
+	    //	    fprintf(Cart_displ,"%lf\t",L_int_save[step][j][i]);
+	    fprintf(Cart_displ,"%8.3g ",Lcartint[j][i]);fflush(0);
+	    //fprintf(Cart_displ,"%8.3g ",cart_displ[j][i]);fflush(0);
+	  }  
+	  fprintf(Cart_displ,"\n");
+	}
+	fprintf(Cart_displ,"\n");
+	*/
+
+
       }
+
+
+    //evaluation of vibr freqs. 7 should be zero or near 0 
+    //( 3 rotational + 3 translation + projected reaction path)
+    //they are excluded from the calculation of VaG
+
+      frequencies=calc_freq(lambda,frequencies);
+
+    //    fprintf(freq_results,"step\tfreqs\n");
+      fprintf(freq_results, "%d\t",step);
+
+
+      for(i=0;i<dim;i++){     
+	frequencies_save[step][i]=frequencies[i];
+	fprintf(freq_results, "%lf\t",frequencies_save[step][i]);  
+      }
+      fprintf(freq_results, "\n");
+
+
+      if(intcoord==1){
+	for(i=0;i<dim-6;i++){     
+	  frequencies_save[step][i]=Freqint[i];
+	}
+	for(i=0;i<dim;i++){     
+	  fprintf(freq_results, "%lf\t",Freqint[i]);  
+	}
+
+	free(Freqint);
+      }
+
+      free(lambda);
+
+      fprintf(freq_results, "\n");
 
 
       if(MAXSTEP==1){
 
-	if((anim_freq=fopen("anim_freq.xyz","w"))==NULL) {
-	  printf("********IMPOSSIBILE APRIRE IL FILE %s*************\n","L_orig_save.txt");
-	  exit(1);
-	}
 
 	double *start_coord,*arr_pcoord,*arr_ncoord;
 	start_coord=  (double *) malloc((int)(3*ATOMS)* sizeof(double));
@@ -373,27 +475,7 @@ int main(void) {
 	free(arr_pcoord);
 	free(arr_ncoord);
 	fclose(anim_freq);
-
       }
-
-
-    //evaluation of vibr freqs. 7 should be zero or near 0 
-    //( 3 rotational + 3 translation + projected reaction path)
-    //they are excluded from the calculation of VaG
-
-      frequencies=calc_freq(lambda,frequencies);
-
-    //    fprintf(freq_results,"step\tfreqs\n");
-      fprintf(freq_results, "%d\t",step);
-
-      for(i=0;i<dim;i++){     
-	frequencies_save[step][i]=frequencies[i];
-	fprintf(freq_results, "%lf\t",frequencies_save[step][i]);  
-      }
-
-      free(lambda);
-
-      fprintf(freq_results, "\n");
 
     //free vectors
 
@@ -407,6 +489,8 @@ int main(void) {
       free(frequencies);
    
     }
+
+
 
     if(onlyrotors!=0){
       fclose(L_orig_save);
@@ -478,10 +562,6 @@ int main(void) {
   */
   //calcolo BKf l'ultimo vettore della nonadiabatic coupling matrix Bkl per ogni punto della coordianta di reazione per cui vale  Km[s]=-BkF[s]
 
-    if((Km_res=fopen("Km_res.txt","w"))==NULL) {
-      printf("********IMPOSSIBILE APRIRE IL FILE %s*************\n","Km_res.txt");
-      exit(1);
-    }
 
     fprintf(Km_res,"BkF:\n");
     
@@ -920,11 +1000,12 @@ void allocation( int dim ) {
 
 
 
-void reading_inputfile () {
+void read_inputfile () {
 
   char buffer[200];
   char filename[20];
   int j,i,ij;
+  int natread;
   int s=0;
   FILE *fp;
 
@@ -1079,10 +1160,10 @@ void reading_inputfile () {
   MAXSTEP2TS=saddlep*2+1;
   //intialize
 
-  // Read dsmethod
+  // Read coordinates type
   if(!feof(fp)) {
-    fscanf(fp,"%s %d",buffer,&dsmethod);
-    //    printf("method to compute ds:      %d\n", dsmethod);
+    fscanf(fp,"%s %d",buffer,&intcoord);
+    //    printf("Cartesian0/Iternal1 coord:      %d\n", intcoord);
   } else {
     printf("Data file error\nthe program will be stopped now\n");
     exit(0);
@@ -1167,6 +1248,21 @@ void reading_inputfile () {
   numatomsintopA= (int *) malloc(numrotors * sizeof(int) );
 
   atomsintopA =  (int **) malloc((int)(numrotors)* sizeof(int*));
+  for(j=0; j < numrotors; j++) {
+    atomsintopA[j]= (int *) malloc(ATOMS * sizeof(int) );
+  }
+  atomsintopB =  (int **) malloc((int)(numrotors)* sizeof(int*));
+  for(j=0; j < numrotors; j++) {
+    atomsintopB[j]= (int *) malloc(ATOMS * sizeof(int) );
+  }
+
+  for (i=0;i<numrotors;i++) {
+    for (j=0;j<ATOMS;j++) {
+      atomsintopA[i][j]=0;
+      atomsintopB[i][j]=0;
+    }
+  }
+
 
   for (i=0;i<numrotors;i++) {
 
@@ -1200,28 +1296,43 @@ void reading_inputfile () {
 
     //  }
     
-
-    //  for (i=0;i<numrotors;i++) {
-
-    
-    atomsintopA[i]= (int *) malloc(numatomsintopA[i] * sizeof(int) );
-
     
     // Read atoms in group A
     fscanf(fp,"%s ",buffer);  
-    printf("buffer is:      %s\n", buffer);
+    //    printf("buffer is:      %s\n", buffer);
     for(j=0;j<numatomsintopA[i];j++){
       if(!feof(fp)) {
-	fscanf(fp,"%d",&atomsintopA[i][j]);
-	//	      printf("atomsintopA:      %d\n", atomsintopA[i][j]);
+	//	fscanf(fp,"%d",&atomsintopA[i][j]);
+	fscanf(fp,"%d",&natread);
+	//	printf("atomsintopA:      %d\n", natread);
+	atomsintopA[i][natread-1]=1;
       } else {
 	printf("Data file error\nthe program will be stopped now\n");
 	exit(0);
       }
     }
+    for(j=0;j<ATOMS;j++){
+      if((atomsintopA[i][j]!=1) && (j!=pivotA[i]-1) && (j!=pivotB[i]-1)){
+	atomsintopB[i][j]=1;
+      }
+    }
   }
 
-  //  exit(0);
+  /*
+  for (i=0;i<numrotors;i++) {
+    for (j=0;j<ATOMS;j++) {
+      printf("at A i % d j %d is:  %d\n",i,j,atomsintopA[i][j]);
+    }
+  }
+  for (i=0;i<numrotors;i++) {
+    for (j=0;j<ATOMS;j++) {
+      printf("at B i % d j %d is:  %d\n",i,j,atomsintopB[i][j]);
+    }
+  }
+
+  exit(0);
+  */
+
   /*  
   if(!feof(fp)) {
     fscanf(fp,"%s",buffer);    
@@ -1310,7 +1421,7 @@ void reading_inputfile () {
 	  if(s==0){
 	
 	    if (atomic_number==1){
-	      atoms_data[j].atom_name=" H";	  
+	      atoms_data[j].atom_name="H";	  
 	    // gaussian and IUPAC coincide
 	      atoms_data[j].atomic_mass=1.00783;
 	    }
@@ -1501,7 +1612,7 @@ void reading_inputfile () {
 	exit(0);
       }
         
-    //Reading Hessian in cartesian coordinates
+    //Read Hessian in cartesian coordinates
     
     //    printf("\nHessian: \n");
     
@@ -1591,7 +1702,7 @@ void read_VaG_mueff () {
 }
 
 
-void reading_pesrxfile () {
+void read_pesrxfile () {
 
   int i,step;
   char buffer[100];
@@ -1636,7 +1747,7 @@ void reading_pesrxfile () {
 
 
 
-void reading_pesfile () {
+void read_pesfile () {
 
   int i;
   char buffer[100];
@@ -1673,7 +1784,881 @@ void reading_pesfile () {
   
 }
 
-void reading_rxfile () {
+
+void read_Bmat_Cmat () {
+
+  int i,j,k;
+  //  char buffer[100];
+  char filename[20];
+  FILE *fp;
+  int browsc;
+  int bcolumnsc;
+
+  sprintf(filename,"bmat.dat");
+  if((fp=fopen(filename,"r"))==NULL){
+    printf("main: IMPOSSIBILE APRIRE IL FILE: %s\nProgram now exits\n",filename);
+    exit(1);
+  }
+  fscanf(fp,"%d %d ",&brows,&bcolumns);
+
+  // allocate bmat
+  printf("B rows and columns %d %d\n",brows,bcolumns);
+
+  Bmat =  (double **) malloc((int)(brows)* sizeof(double*));
+  for(step=0; step<brows; step++) { Bmat[step]=  (double *) malloc((int)(bcolumns)* sizeof(double));}
+
+  Cmat =  (double ***) malloc((int)(brows)* sizeof(double**));
+  for(step=0; step<brows; step++) { Cmat[step]=  (double **) malloc((int)(bcolumns)* sizeof(double*));}
+  for(step=0; step<brows; step++){ for(j=0; j <(int)(bcolumns); j++) { Cmat[step][j]=  (double *) malloc((int)(bcolumns)* sizeof(double));}}
+
+
+  if(!feof(fp)) {
+    for(i=0;i<brows;i++){
+      for(j=0;j<bcolumns;j++){
+	fscanf(fp,"%lf",&Bmat[i][j]);
+      }
+    }
+  } else {
+    printf("Data file error - Bmat\nthe program will be stopped now\n");
+    exit(0);
+  }
+
+fclose(fp);
+  //  printf("last value %lf\n",Bmat[brows-1][bcolumns-1]);
+  //  exit(0);
+
+  /*
+  L_int_save=(double ***) malloc( MAXSTEP*sizeof(double **) );
+  for(step=0;step<MAXSTEP;step++){ L_int_save[step]=(double **) malloc( (int)(dim)*sizeof(double *) );}
+  for(step=0;step<MAXSTEP;step++){ for(j=0; j <(int)(dim); j++) { L_int_save[step][j]= (double*) malloc((int)(dim)*sizeof(double) );} }
+
+  Hessian_deriv=(double ***) malloc( MAXSTEP*sizeof(double **) );for(step=0;step<MAXSTEP;step++){ Hessian_deriv[step]=(double **) malloc( (int)(dim)*sizeof(double *) );}
+
+  for(step=0;step<MAXSTEP;step++){ for(j=0; j <(int)(dim); j++) { Hessian_deriv[step][j]= (double*) malloc((int)(dim)*sizeof(double) );} }
+
+  */
+
+  sprintf(filename,"cmat.dat");
+  if((fp=fopen(filename,"r"))==NULL){
+    printf("main: IMPOSSIBILE APRIRE IL FILE: %s\nProgram now exits\n",filename);
+    exit(1);
+  }
+
+ fscanf(fp,"%d %d ",&browsc,&bcolumnsc);
+ if(browsc!=brows || bcolumnsc != bcolumns){
+   printf("main: Bmat and Cmat not compatible: rows %d %d\n",brows,browsc);
+   printf("main: Bmat and Cmat not compatible: columns %d %d\n",bcolumns,bcolumnsc);
+   printf("Program now exits\n");
+   exit(1);
+ }
+
+ int indexi;
+
+  if(!feof(fp)) {
+    for(i=0;i<browsc;i++){
+      fscanf(fp,"%d",&indexi);
+      for(j=0;j<bcolumnsc;j++){
+	for(k=0;k<bcolumnsc;k++){
+	fscanf(fp,"%lf",&Cmat[i][j][k]);
+	}
+      }
+      //      printf("reading Cmat component %d \n",indexi);
+    }
+  } else {
+    printf("Data file error - Bmat\nthe program will be stopped now\n");
+    exit(0);
+  }
+
+
+  fclose(fp);
+  //  exit(0);
+
+  /*
+  if(!feof(fp)) {
+    for(i=0;i<MAXSTEP;i++){
+      fscanf(fp,"%s %s %s %s",buffer,buffer,buffer,buffer);
+      fscanf(fp,"%lf %s %s %s %s ",&Energy[i],buffer,buffer,buffer,buffer);      
+    }
+  } else {
+    printf("Data file error\nthe program will be stopped now\n");
+    exit(0);
+  }
+  */
+
+        
+  
+}
+
+void calc_Amat () {
+
+  int i,j;
+  int kind,aind;
+  //  char buffer[100];
+  double ** Umat;
+  double ** BmatT;
+  double ** Gtemp;
+  //  double ** Gmat;
+  double ** GmatM1;
+  double ** Atemp;
+
+  // allocate bmat
+  //  printf("B rows and columns %d %d\n",brows,bcolumns);
+
+  Umat =  (double **) malloc((int)(bcolumns)* sizeof(double*));
+  for(step=0; step<bcolumns; step++) { Umat[step]=  (double *) malloc((int)(bcolumns)* sizeof(double));}
+  BmatT =  (double **) malloc((int)(bcolumns)* sizeof(double*));
+  for(step=0; step<bcolumns; step++) { BmatT[step]=  (double *) malloc((int)(brows)* sizeof(double));}
+  Gmat =  (double **) malloc((int)(brows)* sizeof(double*));
+  for(step=0; step<brows; step++) { Gmat[step]=  (double *) malloc((int)(brows)* sizeof(double));}
+  //  GmatM1 =  (double **) malloc((int)(brows)* sizeof(double*));
+  //  for(step=0; step<brows; step++) { GmatM1[step]=  (double *) malloc((int)(brows)* sizeof(double));}
+  Amat =  (double **) malloc((int)(bcolumns)* sizeof(double*));
+  for(step=0; step<bcolumns; step++) { Amat[step]=  (double *) malloc((int)(brows)* sizeof(double));}
+
+  kind=0;
+  aind=0;
+  for(i=0;i<bcolumns;i++){
+    for(j=0;j<bcolumns;j++){
+      if(i==j){
+		Umat[i][j]=1./atoms_data[aind].atomic_mass;
+		//	Umat[i][j]=1.;
+	//	printf("Umat is %lf \n",Umat[i][j]);
+	kind=kind+1;
+	if(kind==3){
+	  aind=aind+1;
+	  kind=0;
+	}
+      } else
+	Umat[i][j]=0.;
+    }
+  }
+
+  /*  
+  for(i=0;i<bcolumns;i++){
+    for(j=0;j<bcolumns;j++){
+	printf(" %lf ",Umat[i][j]);
+    }
+	printf("\n");
+  }
+  exit(0);
+  
+  */
+  //  printf("Aind is %d \n",aind);
+  //  exit(0);
+
+
+  BmatT=transpose_double(Bmat,bcolumns,brows,BmatT);
+
+  //  printf("last value transp B %lf\n",BmatT[bcolumns-1][brows-1]);
+
+  Gtemp=prod_mat2(Umat,bcolumns,bcolumns,BmatT,bcolumns,brows);
+  //  printf("last value Gtemp %lf\n",Gtemp[bcolumns-1][brows-1]);
+
+  Gmat=prod_mat2(Bmat,brows,bcolumns,Gtemp,bcolumns,brows);
+  //  printf("last value Gmat %lf\n",Gmat[brows-1][brows-1]);
+
+  //  exit(0);
+  GmatM1=invert_matrix(Gmat,brows);
+
+  //  printf("last value GmatM1 %lf\n",GmatM1[brows-1][brows-1]);
+
+  Atemp=prod_mat2(BmatT,bcolumns,brows,GmatM1,brows,brows);
+  //  printf("last value Atemp %lf\n",Atemp[bcolumns-1][brows-1]);
+
+  Amat=prod_mat2(Umat,bcolumns,bcolumns,Atemp,bcolumns,brows);
+  //  printf("last value Amatrix %lf\n",Amat[bcolumns-1][brows-1]);
+
+  // check consistency of B and A matrixes
+
+  /*
+  double **testmat;
+  testmat=prod_mat2(Bmat,brows,bcolumns,Amat,bcolumns,brows);
+  for (i=0; i<brows; i++) {
+    for (j=0; j<brows; j++) {
+    printf(" %lf",testmat[i][j]);
+    }
+    printf(" \n");
+  }
+  exit(0);
+  */
+
+  // now diagonalize and get eigenvalues and eigen freqs for Gmatrix
+  // here we use the approach of Miyazawa (JCP 29 (1958) 246).
+
+  int dim;
+
+  dim=brows+1;
+
+  double *Glambda;
+  double **GL_temp;
+  double **GL;
+  double **BL;
+  double **G_temp;
+  
+  Glambda = (double *) malloc(sizeof(double) * dim);
+  GL_temp = (double **) malloc((int)dim*sizeof(double *) );
+  G_temp = (double **) malloc((int)dim*sizeof(double *) );
+  GL = (double **) malloc((int)(dim-1)*sizeof(double *) );
+  BL = (double **) malloc((int)(dim-1)*sizeof(double *) );
+ 
+  for(j=0; j<(int)(dim); j++) {
+    G_temp[j]=(double *) malloc((int)(dim)*sizeof(double)) ;
+    GL_temp[j]=(double *) malloc((int)(dim)*sizeof(double)) ;
+  }
+
+  for(j=0; j<(int)(dim-1); j++) {
+    GL[j]=(double *) malloc((int)(dim-1)*sizeof(double)) ;
+    BL[j]=(double *) malloc((int)(dim-1)*sizeof(double)) ;
+  }
+
+
+  for (i=0; i<dim; i++) {
+    for (j=0; j<dim; j++) {
+      if(j==i) GL_temp[i][j]=1;
+      else GL_temp[i][j]=0.;
+      G_temp[i][j]=0.;
+    }
+  }
+  
+  for (i=1; i<dim; i++) {
+    for (j=1; j<dim; j++) {
+      G_temp[i][j]= Gmat[i-1][j-1];
+    }
+  }
+  
+  jacobi(G_temp, dim-1, Glambda, GL_temp, nrot);
+  eigsrt(Glambda, GL_temp, dim-1);
+
+  for (i=1; i<dim; i++) {
+    for (j=1; j<dim; j++) {
+      GL[i-1][j-1]= GL_temp[i][j];
+    }
+  }
+
+  //  for(j=1;j<(int)(dim);j++){
+  //    printf("Glambda %6.2f  \n",Glambda[j]);
+  //  }
+
+  //  for(j=0;j<(int)(dim-1);j++){
+  //    printf("GL  %8.4f  \n",GL[0][j]);
+  //  }
+
+  // now fill in the diagonal matrix BL with sqrt of eigenvalues 
+
+
+  for (i=0; i<dim-1; i++) {
+    for (j=0; j<dim-1; j++) {
+      if(j==i) BL[i][j]=sqrt(Glambda[i+1]);
+       else BL[i][j]=0.;
+    }
+  }
+  
+  // now compute the AB matrix of Miyazawa
+
+
+  //  double **ABL;
+
+  ABLmat=prod_mat2(GL,brows,brows,BL,brows,brows);
+
+  // free vectors
+
+  for(i=0;i<bcolumns;i++){ free (Umat[i]); } free(Umat);
+  for(i=0;i<bcolumns;i++){ free (BmatT[i]); } free(BmatT);
+  for(i=0;i<bcolumns;i++){ free (Atemp[i]); } free(Atemp);
+  for(i=0;i<brows;i++){ free (GmatM1[i]); } free(GmatM1);
+  //  for(i=0;i<brows;i++){ free (Gmat[i]); } free(Gmat);
+  for(i=0;i<bcolumns;i++){ free (Gtemp[i]); } free(Gtemp);
+
+  for(i=0;i<brows;i++){ free (BL[i]); } free(BL);
+  for(i=0;i<brows;i++){ free (GL[i]); } free(GL);
+  for(i=0;i<brows+1;i++){ free (GL_temp[i]); } free(GL_temp);
+
+  free(Glambda);
+
+  //  free(e_temp);
+
+
+  //  exit(0);
+
+}
+
+
+void intcoord_hessian (double **FC, double *grad) {
+
+  int i,j,k;
+  //  int kind,aind;
+  //  char buffer[100];
+  double ** FCtemp;
+  double ** Ftemp;
+  double ** Ftemp2;
+  double ** Ftemp3;
+  double ** Ftemp4;
+  double ** AmatT;
+  double ** ABLmatT;
+  double ** Fmat_int;
+  double ** Fmat_int2;
+  double ** Gradmat;
+  double ** Pmat1;
+  double ** Pmat2;
+  double * Grad_int;
+  //  double ** ACmat_temp1;
+  double *** ACmat_temp2;
+  double ** ACmat_temp3;
+  //  double ** ACmat_temp4;
+  double ** ACmat_tempa;
+  double ** ACmat_tempb;
+
+  //  double * frequencies_int;
+
+  // convert Hessian to Angstron
+
+  double conv1;
+
+  //  conv1=bohr;
+  FCtemp =  (double **) malloc((int)(bcolumns)* sizeof(double*));
+  for(step=0; step<bcolumns; step++) { FCtemp[step]=  (double *) malloc((int)(bcolumns)* sizeof(double));}
+  AmatT =  (double **) malloc((int)(brows)* sizeof(double*));
+  for(step=0; step<brows; step++) { AmatT[step]=  (double *) malloc((int)(bcolumns)* sizeof(double));}
+  ABLmatT =  (double **) malloc((int)(brows)* sizeof(double*));
+  for(step=0; step<brows; step++) { ABLmatT[step]=  (double *) malloc((int)(brows)* sizeof(double));}
+  Grad_int=(double *) malloc((int)(brows)* sizeof(double));
+  Gradmat =  (double **) malloc((int)(brows)* sizeof(double*));
+  for(step=0; step<brows; step++) { Gradmat[step]=  (double *) malloc((int)(brows)* sizeof(double));}
+
+  //  ACmat_temp1 =  (double ***) malloc((int)(brows)* sizeof(double**));
+  //  for(step=0; step<brows; step++) { ACmat_temp1[step]=  (double **) malloc((int)(bcolumns)* sizeof(double*));}
+  //  for(step=0; step<brows; step++){ for(j=0; j <(int)(bcolumns); j++) { ACmat_temp1[step][j]=  (double *) malloc((int)(brows)* sizeof(double));}}
+
+  ACmat_temp2 =  (double ***) malloc((int)(brows)* sizeof(double**));
+  for(step=0; step<brows; step++) { ACmat_temp2[step]=  (double **) malloc((int)(brows)* sizeof(double*));}
+  for(step=0; step<brows; step++){ for(j=0; j <(int)(brows); j++) { ACmat_temp2[step][j]=  (double *) malloc((int)(brows)* sizeof(double));}}
+
+  ACmat_temp3 =  (double **) malloc((int)(brows)* sizeof(double*));
+  for(step=0; step<brows; step++) { ACmat_temp3[step]=  (double *) malloc((int)(brows)* sizeof(double));}
+
+  //  ACmat_temp1 =  (double **) malloc((int)(bcolumns)* sizeof(double*));
+  //  for(step=0; step<bcolumns; step++) { ACmat_temp1[step]=  (double *) malloc((int)(bcolumns)* sizeof(double));}
+
+  //  ACmat_temp4 =  (double **) malloc((int)(brows)* sizeof(double*));
+  //  for(step=0; step<brows; step++) { ACmat_temp4[step]=  (double *) malloc((int)(brows)* sizeof(double));}
+
+    
+  //mass unweight the Hessian and go to Angstrom
+
+  conv1=bohr*bohr;
+
+  for (i=0;i<bcolumns;i++){
+    for (j=0;j<bcolumns;j++){
+      FCtemp[i][j]=FC[i][j]*conv1; 
+    }
+  }
+
+  FCtemp=force_constants_mass_unweight(FCtemp);
+
+  /*  
+  printf(" unproj FC matrix \n"); 
+  for (i=0;i<bcolumns;i++){
+    for (j=0;j<bcolumns;j++){
+      printf(" %lf ",FCtemp[i][j]); 
+    }
+      printf("\n"); 
+  }
+  printf(" A matrix \n"); 
+  for (i=0;i<bcolumns;i++){
+    for (j=0;j<brows;j++){
+      printf(" %lf ",Amat[i][j]); 
+    }
+      printf("\n"); 
+  }
+  printf(" G matrix \n"); 
+  for (i=0;i<brows;i++){
+    for (j=0;j<brows;j++){
+      printf(" %lf ",Gmat[i][j]); 
+    }
+      printf("\n"); 
+  }
+  */
+
+  AmatT=transpose_double(Amat,brows,bcolumns,AmatT);
+
+  Ftemp=prod_mat2(FCtemp,3*ATOMS,3*ATOMS,Amat,bcolumns,brows);
+
+  Ftemp2=prod_mat2(AmatT,brows,bcolumns,Ftemp,3*ATOMS,brows);
+
+  /*  
+  printf(" A matrix \n"); 
+  for (i=0;i<brows;i++){
+    for (j=0;j<brows;j++){
+      printf(" %lf ",Amat[i][j]); 
+    }
+      printf("\n"); 
+  }
+  */
+  // Ftemp2 is the Hessian in internal coordinates. 
+
+  // now we compute the corretion for the gradient
+
+  //first we compute the gradient in Hartree/ang
+  // we also put back weights 
+
+  int iatom=0;
+  int iind=0;
+  double gcheck=0.;
+  for (i=0;i<brows;i++){
+    Grad_int[i]=0.;
+    //    printf(" %d\n ",i); 
+    //    printf(" grad %d %lf \n ",i,grad[i]); 
+    iind=0;
+    iatom=0;
+    for (j=0;j<bcolumns;j++){
+      if(iind==3){
+	iatom=iatom+1;
+	iind=0;
+      }
+      iind=iind+1;
+      //      printf(" %d\n ",iatom); 
+      //      Grad_int[i]+=grad[j]*sqrt(atoms_data[iatom].atomic_mass)*AmatT[i][j];
+      Grad_int[i]+=grad[j]*sqrt(atoms_data[iatom].atomic_mass)*AmatT[i][j]*bohr;
+      gcheck+=grad[j];
+      //      Grad_int[i]+=grad[j]*sqrt(atoms_data[iatom].atomic_mass)*AmatT[i][j];
+    }
+  }
+
+  for (j=0;i<brows;j++){
+    for (i=0;i<brows;i++){
+      for (k=0;k<brows;k++){
+	ACmat_temp2[j][i][k]=0.;
+      }
+    }
+  }
+
+  /*  
+    for (i=0;i<bcolumns;i++){
+      for (k=0;k<bcolumns;k++){
+	ACmat_temp1[i][k]=Cmat[0][i][k];
+      }
+    }
+
+    for (i=0;i<brows;i++){
+      for (k=0;k<brows;k++){
+	ACmat_temp4[i][k]=0.;
+      }
+    }
+  
+  */
+
+    for (j=0;j<brows;j++){
+      ACmat_tempa=prod_mat2(Cmat[j],bcolumns,bcolumns,Amat,bcolumns,brows);
+    //  ACmat_tempa=prod_mat2(ACmat_temp1,bcolumns,bcolumns,Amat,bcolumns,brows);
+      ACmat_tempb=prod_mat2(AmatT,brows,bcolumns,ACmat_tempa,bcolumns,brows);
+      for (i=0;i<brows;i++){
+	for (k=0;k<brows;k++){
+	  //	  ACmat_temp2[j][i][k]=ACmat_tempb[i][k]*Grad_int[j];
+	  ACmat_temp2[j][i][k]=ACmat_tempb[i][k]*Grad_int[j];
+	  //	  ACmat_temp4[i][k]=ACmat_tempb[i][k];
+	}
+      }
+      for(i=0;i<bcolumns;i++){free(ACmat_tempa[i]);}free(ACmat_tempa);
+      for(i=0;i<brows;i++){free(ACmat_tempb[i]);}free(ACmat_tempb);
+      printf("Gr %d %lf\n ",j,Grad_int[j]); 
+    }
+
+
+  /*
+  for (j=0;j<brows;j++){
+    ACmat_temp1[j]=prod_mat2(Cmat[j],bcolumns,bcolumns,Amat,bcolumns,brows);
+    ACmat_temp2[j]=prod_mat2(AmatT,brows,bcolumns,ACmat_temp1[j],bcolumns,brows);
+    for (i=0;i<brows;i++){
+      for (k=0;k<brows;k++){
+	ACmat_temp2[j][i][k]=ACmat_temp2[j][i][k]*Grad_int[j];
+      }
+    }
+   }
+
+  */
+
+
+  for (i=0;i<brows;i++){
+    for (k=0;k<brows;k++){
+      ACmat_temp3[i][k]=0.;
+    }
+  }
+
+
+  for (j=0;j<brows;j++){
+    for (i=0;i<brows;i++){
+      for (k=0;k<brows;k++){
+	ACmat_temp3[i][k]=ACmat_temp3[i][k]+ACmat_temp2[j][i][k];
+      }
+    }
+  }
+
+
+  /*         
+  printf("ACM_3\n"); 
+  for (i=0;i<brows;i++){
+    for (j=0;j<brows;j++){
+      printf(" %lf ",ACmat_temp4[i][j]); 
+    }
+    printf("\n"); 
+  }
+  printf("\n"); 
+
+  printf("ACtemp_2\n"); 
+  for (i=0;i<brows;i++){
+    for (j=0;j<brows;j++){
+      printf(" %lf ",ACmat_temp2[0][i][j]); 
+    }
+    printf("\n"); 
+  }
+  printf("\n"); 
+
+
+      printf("Cmat\n"); 
+  for (i=0;i<bcolumns;i++){
+    for (j=0;j<bcolumns;j++){
+      printf(" %lf ",Cmat[0][i][j]); 
+    }
+      printf("\n"); 
+  }
+      printf("\n"); 
+  */
+  
+
+
+    //        double inc_fact=1.;
+
+  for (j=0;j<brows;j++){
+    for (k=0;k<brows;k++){
+      //with C matrix contribution
+      // negative (should be the correct one!)
+      //            Ftemp2[j][k]=Ftemp2[j][k]-ACmat_temp3[j][k]; 
+      // positive
+            Ftemp2[j][k]=Ftemp2[j][k]+ACmat_temp3[j][k]; 
+      //without C matrix contribution
+      //            Ftemp2[j][k]=Ftemp2[j][k]+ACmat_temp3[j][k]*10.; 
+      //	  Ftemp2[j][k]=Ftemp2[j][k];
+    }
+  }
+
+
+  double grnorm=0.;
+
+  for (i=0;i<brows;i++){
+    for (k=0;k<brows;k++){
+      //grnorm+=Grad_int[k]*Grad_int[k]*Gmat[i][k];
+      grnorm+=Grad_int[i]*Grad_int[k]*Gmat[i][k];
+    }
+  }
+
+  // check modification
+    grnorm=grnorm;
+
+  if(grnorm != 0.){
+    for (i=0;i<brows;i++){
+      for (k=0;k<brows;k++){
+	Gradmat[i][k]=Grad_int[i]*Grad_int[k]/grnorm;
+      }
+    }
+  }
+
+  Pmat1=prod_mat2(Gmat,brows,brows,Gradmat,brows,brows);
+  Pmat2=prod_mat2(Gradmat,brows,brows,Gmat,brows,brows);
+
+  for (i=0;i<brows;i++){
+    for (k=0;k<brows;k++){
+      if(i==k){
+	Pmat1[i][k]=1.-Pmat1[i][k];
+	Pmat2[i][k]=1.-Pmat2[i][k];
+      } else{
+	Pmat1[i][k]=-Pmat1[i][k];
+	Pmat2[i][k]=-Pmat2[i][k];
+      }
+    }
+  }
+
+
+  /*       
+      printf("Grad Mat\n"); 
+  for (i=0;i<brows;i++){
+    for (j=0;j<brows;j++){
+      printf(" %lf ",Gradmat[i][j]); 
+    }
+      printf("\n"); 
+  }
+      printf("\n"); 
+  */
+      //      exit(0);
+
+  Ftemp4=prod_mat2(Ftemp2,brows,brows,Pmat1,brows,brows);
+  Fmat_int2=prod_mat2(Pmat2,brows,brows,Ftemp4,brows,brows);
+
+  //Now we can determine the eigenvalues we use the AB mat of Miyazawa
+
+  // with reaction path projection (but not at the TS)
+
+  if(gcheck!=0){
+    Ftemp3=prod_mat2(Fmat_int2,brows,brows,ABLmat,brows,brows);
+  } else {
+        Ftemp3=prod_mat2(Ftemp2,brows,brows,ABLmat,brows,brows);
+  }
+
+
+  // without reaction path projection
+  //        Ftemp3=prod_mat2(Ftemp2,brows,brows,ABLmat,brows,brows);
+
+  // we transpose ABL
+
+  ABLmatT=transpose_double(ABLmat,brows,brows,ABLmatT);
+
+  //we compute the symmetrized F internal matrix
+
+  Fmat_int=prod_mat2(ABLmatT,brows,brows,Ftemp3,brows,brows);
+
+  // now convert the Hessian to J/m^2*kg
+
+  conv1=joule/a_mass*1.0e10*1.0e10;
+
+  for (j=0;j<brows;j++){
+    for (k=0;k<brows;k++){
+      Fmat_int[j][k]=Fmat_int[j][k]*conv1; 
+    }
+  }
+
+
+  // now calculate eigenvalues
+
+  int dim;
+
+  dim=brows+1;
+
+  double *lambda;
+  double **L;
+  double **FC_temp;
+  
+  lambda = (double *) malloc(sizeof(double) * dim);
+  Freqint = (double *) malloc(sizeof(double) * brows);
+  L = (double **) malloc((int)dim*sizeof(double *) );
+  FC_temp = (double **) malloc((int)dim*sizeof(double *) );
+ 
+  for(j=0; j<(int)(dim); j++) {
+    FC_temp[j]=(double *) malloc((int)(dim)*sizeof(double)) ;
+    L[j]=(double *) malloc((int)(dim)*sizeof(double)) ;
+  }
+
+  for (i=0; i<dim; i++) {
+    for (j=0; j<dim; j++) {
+      if(j==i) L[i][j]=1;
+      else L[i][j]=0.;
+      FC_temp[i][j]=0.;
+    }
+  }
+  
+  for (i=1; i<dim; i++) {
+    for (j=1; j<dim; j++) {
+      FC_temp[i][j]= Fmat_int[i-1][j-1];
+    }
+  }
+  
+
+  jacobi(FC_temp, dim-1, lambda, L, nrot);
+  eigsrt(lambda, L, dim-1);
+
+  for(j=1;j<(int)(dim);j++){
+    printf(" %6.2f %6.2f \n",sqrt(fabs(lambda[j]))/(2 * pi * c_light_cm_s ),lambda[j]/1.0E20);
+  }
+
+  for(j=1;j<(int)(dim);j++){
+    Freqint[j-1]=sqrt(fabs(lambda[j]))/(2 * pi * c_light_cm_s )*lambda[j]/fabs(lambda[j]);
+  }
+  
+  FILE *hrproj_freq;
+  if((hrproj_freq=fopen("hrprojint_freq.dat","w"))==NULL) {
+    printf("********IMPOSSIBILE APRIRE IL FILE %s*************\n","hrproj_freq.dat");
+    exit(1);
+  }
+
+  for(j=1;j<brows+1;j++){
+    fprintf(hrproj_freq," %6.2f %6.2f \n",sqrt(fabs(lambda[j]))/(2 * pi * c_light_cm_s ),lambda[j]/1.0E20);
+  }
+
+  fclose(hrproj_freq);
+  
+  // now renumber eigenvectors
+
+  double **L_temp; 
+
+  L_temp = (double **) malloc((int)brows*sizeof(double *) );
+  for(j=0; j<(int)(brows); j++) {
+    L_temp[j]=(double *) malloc((int)(brows)*sizeof(double)) ;
+  }
+
+  for(j=0; j<(int)(brows); j++) {
+    for(i=0; i<(int)(brows); i++) {
+      //      L_temp[i][j]=L[i+1][j+1]/L[1][j+1];
+      L_temp[i][j]=L[i+1][j+1];
+    }
+  }
+
+  double **L_int; 
+  double **L_intM1; 
+  double **L_intM1T; 
+  double **Ctemp; 
+  double **Ctemp1; 
+  double **Cdiag; 
+  double **Lcart_temp; 
+  //  double **Lcart; 
+  double *normfact;
+
+  // the internal coordinates Eigenvectors are recovered by multiplication with the AB mat
+
+  L_int=prod_mat2(ABLmat,brows,brows,L_temp,brows,brows);
+
+  // the inverse of L_int is determined
+
+  L_intM1=invert_matrix(L_int,brows);
+
+  L_intM1T =  (double **) malloc((int)(brows)* sizeof(double*));
+  for(step=0; step<brows; step++) { L_intM1T[step]=  (double *) malloc((int)(brows)* sizeof(double));}
+
+  Cdiag =  (double **) malloc((int)(brows)* sizeof(double*));
+  for(step=0; step<brows; step++) { Cdiag[step]=  (double *) malloc((int)(brows)* sizeof(double));}
+
+  normfact =  (double *) malloc((int)(brows)* sizeof(double));
+
+  L_intM1T=transpose_double(L_intM1,brows,brows,L_intM1T);
+
+  //  Ctemp1=prod_mat2(L_int,brows,brows,L_intT,brows,brows);
+
+  Ctemp1=prod_mat2(Gmat,brows,brows,L_intM1T,brows,brows);
+  Ctemp=prod_mat2(L_intM1,brows,brows,Ctemp1,brows,brows);
+  
+
+  for (i=0; i<brows; i++) {
+    for (j=0; j<brows; j++) {
+      if(j==i) Cdiag[i][j]=sqrt(Ctemp[i][j]);
+      else Cdiag[i][j]=0.;
+    }
+  }
+
+  // now we can compute the Cartesian Eigenvectors
+  // please note, Lcart is globally defined, but the memery is allocted here and freed in the main
+
+  Lcart_temp=prod_mat2(L_int,brows,brows,Cdiag,brows,brows);
+  Lcartint=prod_mat2(Amat,bcolumns,brows,Lcart_temp,brows,brows);
+
+  //  Lcart=prod_mat2(Amat,bcolumns,brows,L_int,brows,brows);
+
+  // check Eigenvectors
+  /*
+  printf("L_intM\n"); 
+  for (i=0;i<brows;i++){
+    for (j=0;j<brows;j++){
+      printf(" %lf ",Ctemp1[i][j]); 
+    }
+      printf("\n"); 
+  }
+      printf("\n"); 
+
+  printf("G Mat\n"); 
+  //  for (i=0;i<bcolumns;i++){
+  for (i=0;i<brows;i++){
+    for (j=0;j<brows;j++){
+      printf(" %lf ",Gmat[i][j]); 
+    }
+      printf("\n"); 
+  }
+      printf("\n"); 
+  */
+         
+      // now normalize over masses
+
+
+  iatom=0;
+  iind=0;
+  for (j=0;j<brows;j++){
+    normfact[j]=0.;
+    iind=0;
+    iatom=0;
+    for (i=0;i<bcolumns;i++){
+      if(iind==3){
+	iatom=iatom+1;
+	iind=0;
+      }
+      iind=iind+1;
+      Lcartint[i][j]=Lcartint[i][j]*sqrt(atoms_data[iatom].atomic_mass);
+      normfact[j]+=Lcartint[i][j]*Lcartint[i][j]*(atoms_data[iatom].atomic_mass);
+    }
+  }
+
+  // here normalization condition suppressed to match Cartesian Eigen vector definition 
+  // in SCT Cartesian implementation.
+
+  for (j=0;j<brows;j++){
+    for (i=0;i<bcolumns;i++){
+      //      Lcart[i][j]=Lcart[i][j]/sqrt(normfact[j]);
+      Lcartint[i][j]=Lcartint[i][j];
+    }
+  }
+
+  /*
+  printf("Cart Eigen Mat\n"); 
+  for (i=0;i<bcolumns;i++){
+    for (j=0;j<brows;j++){
+      printf(" %lf ",Lcartint[i][j]); 
+    }
+      printf("\n"); 
+  }
+      printf("\n"); 
+  */
+
+
+      //      exit(0);
+
+ 
+  for(i=0;i<dim;i++){free(L[i]);}free(L);
+  for(i=0;i<dim;i++){free(FC_temp[i]);}free(FC_temp);
+  for(i=0;i<bcolumns;i++){free(FCtemp[i]);}free(FCtemp);
+  for(i=0;i<brows;i++){free(Ftemp2[i]);}free(Ftemp2);
+  for(i=0;i<brows;i++){free(Ftemp3[i]);}free(Ftemp3);
+  for(i=0;i<brows;i++){free(Ftemp4[i]);}free(Ftemp4);
+
+  for(i=0;i<brows;i++){free(AmatT[i]);}free(AmatT);
+  for(i=0;i<brows;i++){free(ABLmatT[i]);}free(ABLmatT);
+  for(i=0;i<brows;i++){free(Gradmat[i]);}free(Gradmat);
+  for(i=0;i<brows;i++){for(j=0;j<brows;j++){free(ACmat_temp2[i][j]);}free(ACmat_temp2[i]);}free(ACmat_temp2);
+  for(i=0;i<brows;i++){free(ACmat_temp3[i]);}free(ACmat_temp3);
+  for(i=0;i<brows;i++){free(Pmat1[i]);}free(Pmat1);
+  for(i=0;i<brows;i++){free(Pmat2[i]);}free(Pmat2);
+
+  for(i=0;i<brows;i++){free(Fmat_int2[i]);}free(Fmat_int2);
+  for(i=0;i<brows;i++){free(Fmat_int[i]);}free(Fmat_int);
+  for(i=0;i<brows;i++){free(L_temp[i]);}free(L_temp);
+  for(i=0;i<brows;i++){free(Lcart_temp[i]);}free(Lcart_temp);
+  for(i=0;i<brows;i++){free(L_int[i]);}free(L_int);
+  for(i=0;i<brows;i++){free(L_intM1[i]);}free(L_intM1);
+  for(i=0;i<brows;i++){free(L_intM1T[i]);}free(L_intM1T);
+
+  for(i=0;i<brows;i++){free(Cdiag[i]);}free(Cdiag);
+  for(i=0;i<brows;i++){free(Ctemp[i]);}free(Ctemp);
+  for(i=0;i<brows;i++){free(Ctemp1[i]);}free(Ctemp1);
+
+
+
+  free(lambda);
+  free(normfact);
+  free(Grad_int);
+
+
+  //  exit(0);
+
+  //Hessian[step]
+
+
+}
+
+
+void read_rxfile () {
   int i,i1;
   double i2;
   char buffer[100];
@@ -1701,7 +2686,7 @@ void reading_rxfile () {
 }
 
 /*
-void reading_mueff_file (FILE *fp) {
+void read_mueff_file (FILE *fp) {
   int i;
   
   char buffer[100];
@@ -1725,7 +2710,7 @@ void reading_mueff_file (FILE *fp) {
 }
 */
 
-void reading_newpes_file () {
+void read_newpes_file () {
 
   int i;
   char buffer[100];
@@ -1990,9 +2975,7 @@ double ** force_constants_mass_unweight(double **FC){
   double *mass;
   
   mass=(double *) malloc( (int)(3*ATOMS)*sizeof(double ) );
-  
-    
-  
+ 
   k=0;
   
     for(i=0;i<3*ATOMS;i=i+3){
@@ -2003,11 +2986,11 @@ double ** force_constants_mass_unweight(double **FC){
   }
   
     //   printf("mass vector\n");
-    for(i=0;i<3*ATOMS;i++){
+    //    for(i=0;i<3*ATOMS;i++){
       //  printf("%lf   ",mass[i]);
-    }
+      //    }
     
-    printf("\n");
+    //    printf("\n");
     
     
     for(i=0;i<3*ATOMS;i++){
@@ -2224,6 +3207,439 @@ double **invert_inertia_matrix( double **matrix, int dim, double **inverse_matri
   for(i=0;i<dim;i++)free(b[i]);free(b);
   return inverse_matrix;
 }
+
+
+void determine_top_atoms(int step){
+
+  int i,j;
+  int i1,i2;
+
+  //  int **igroupB;
+  double **dist_matrix;
+  int ncountA,ncountB;
+  int nvar;
+  double *ItopA,*ItopB;
+  int *natomsA,*natomsB;
+  double dist_CH,dist_HC,dist_CO;
+  double dist_OH,dist_HO;
+  double dist_OO;
+  double dist_CC;
+  double dist_SH,dist_NH;
+
+  dist_CH=1.5;
+  //  dist_CH=1.5;
+  //  dist_HC=1.2;
+  dist_HC=1.2;
+  //  dist_CC=2.4;
+  dist_CC=2.4;
+  dist_CO=1.6;
+  dist_OH=1.6;
+  dist_HO=1.2;
+  dist_OO=1.6;
+  dist_SH=1.5;
+  dist_NH=1.3;
+
+  ItopA = (double *) malloc(numrotors*sizeof(double));
+  ItopB = (double *) malloc(numrotors*sizeof(double));
+
+  natomsA = (int *) malloc(numrotors*sizeof(int));
+  natomsB = (int *) malloc(numrotors*sizeof(int));
+
+  igroupB = (int **) malloc(numrotors*sizeof(int *));
+  for(j=0; j < numrotors; j++) {
+    igroupB[j]= (int*) malloc(ATOMS*sizeof(int));
+  }
+
+  //  int **igroupA;
+  igroupA = (int **) malloc(numrotors*sizeof(int *));
+  for(j=0; j < numrotors; j++) {
+    igroupA[j]= (int*) malloc(ATOMS*sizeof(int));
+  }
+
+
+  dist_matrix = (double **) malloc(ATOMS*sizeof(double *));
+  for(j=0; j < ATOMS; j++) {
+    dist_matrix[j]= (double*) malloc(ATOMS*sizeof(double));
+  }
+
+
+  for (i=0;i<ATOMS;i++) {
+    for (j=0;j<ATOMS;j++) {
+      dist_matrix[i][j]=sqrt(pow((atoms_data[i].ext_coord_x[step]-atoms_data[j].ext_coord_x[step]),2)+
+			     pow((atoms_data[i].ext_coord_y[step]-atoms_data[j].ext_coord_y[step]),2)+
+			     pow((atoms_data[i].ext_coord_z[step]-atoms_data[j].ext_coord_z[step]),2));
+    }
+  }
+
+  // convert to Angstrom
+
+
+  for (i=0;i<ATOMS;i++){
+    for (j=0;j<ATOMS;j++){
+      dist_matrix[i][j]=dist_matrix[i][j]/bohr;
+	//      printf("distance between at %d and atom %d is %lf  \n",i,j,dist_matrix[i][j]); 
+    }
+  }
+
+  ///bohr
+
+
+  for (i=0;i<numrotors;i++) {
+    for (j=0;j<ATOMS;j++) {
+      igroupB[i][j]=0;
+      if (j==pivotB[i]-1){
+	igroupB[i][j]=1;
+      }
+    }
+  }
+  
+  for (i=0;i<numrotors;i++) {
+
+    ncountB=1;
+    nvar=1;
+    int ncycle=0;
+    while (nvar!=0 && ncycle < 1000){
+      nvar=0;
+      for (i1=0;i1<ATOMS;i1++) {
+	if(igroupB[i][i1]==1){
+	  for (i2=0;i2<ATOMS;i2++) {
+	    if(i2!=pivotA[i]-1){
+	      //check if C-H bond
+	      // printf("at i1 %d is %s and atom i2 %d is  %s and dist is  %lf  \n",i1,atoms_data[i1].atom_name,i2,atoms_data[i2].atom_name,dist_matrix[i1][i2]); 
+	      
+	      if((strcmp(atoms_data[i1].atom_name,"C")==0)&&(strcmp(atoms_data[i2].atom_name,"H")==0)&&(dist_matrix[i1][i2]<dist_CH)&&(igroupB[i][i2]!=1)&&(atomsintopB[i][i2]==1)){
+		  igroupB[i][i2]=1;
+		  nvar=nvar+1;
+		}
+	      //check if H-C bond
+	      if((strcmp(atoms_data[i1].atom_name,"H")==0)&&(strcmp(atoms_data[i2].atom_name,"C")==0)&&(dist_matrix[i1][i2]<dist_HC)&&(igroupB[i][i2]!=1)&&(atomsintopB[i][i2]==1)){
+		  igroupB[i][i2]=1;
+		  nvar=nvar+1;
+		}
+	      //check if C-C bond
+	      if((strcmp(atoms_data[i1].atom_name,"C")==0)&&(strcmp(atoms_data[i2].atom_name,"C")==0)&&(dist_matrix[i1][i2]<dist_CC)&&(igroupB[i][i2]!=1)&&(atomsintopB[i][i2]==1)){
+		  igroupB[i][i2]=1;
+		  nvar=nvar+1;
+		}
+	      //check if C-O bond
+	      if((strcmp(atoms_data[i1].atom_name,"C")==0)&&(strcmp(atoms_data[i2].atom_name,"O")==0)&&(dist_matrix[i1][i2]<dist_CO)&&(igroupB[i][i2]!=1)&&(atomsintopB[i][i2]==1)){
+		  igroupB[i][i2]=1;
+		  nvar=nvar+1;
+		}
+	      //check if O-C bond
+	      if((strcmp(atoms_data[i1].atom_name,"O")==0)&&(strcmp(atoms_data[i2].atom_name,"C")==0)&&(dist_matrix[i1][i2]<dist_CO)&&(igroupB[i][i2]!=1)&&(atomsintopB[i][i2]==1)){
+		igroupB[i][i2]=1;
+		nvar=nvar+1;
+	      }
+	      //check if O-O bond
+	      if((strcmp(atoms_data[i1].atom_name,"O")==0)&&(strcmp(atoms_data[i2].atom_name,"O")==0)&&(dist_matrix[i1][i2]<dist_OO)&&(igroupB[i][i2]!=1)&&(atomsintopB[i][i2]==1)){
+		igroupB[i][i2]=1;
+		nvar=nvar+1;
+		}
+	      //check if O-O bond
+	      if((strcmp(atoms_data[i1].atom_name,"O")==0)&&(strcmp(atoms_data[i2].atom_name,"O")==0)&&(dist_matrix[i1][i2]<dist_OO)&&(igroupB[i][i2]!=1)&&(atomsintopB[i][i2]==1)){
+		igroupB[i][i2]=1;
+		nvar=nvar+1;
+	      }
+	      //check if H-O bond
+	      if((strcmp(atoms_data[i1].atom_name,"H")==0)&&(strcmp(atoms_data[i2].atom_name,"O")==0)&&(dist_matrix[i1][i2]<dist_HO)&&(igroupB[i][i2]!=1)&&(atomsintopB[i][i2]==1)){
+		igroupB[i][i2]=1;
+		nvar=nvar+1;
+		}
+	      //check if O-H bond
+	      if((strcmp(atoms_data[i1].atom_name,"O")==0)&&(strcmp(atoms_data[i2].atom_name,"H")==0)&&(dist_matrix[i1][i2]<dist_OH)&&(igroupB[i][i2]!=1)&&(atomsintopB[i][i2]==1)){
+		igroupB[i][i2]=1;
+		nvar=nvar+1;
+	      }
+	      //check if H-S bond
+	      if((strcmp(atoms_data[i1].atom_name,"H")==0)&&(strcmp(atoms_data[i2].atom_name,"S")==0)&&(dist_matrix[i1][i2]<dist_SH)&&(igroupB[i][i2]!=1)&&(atomsintopB[i][i2]==1)){
+		igroupB[i][i2]=1;
+		nvar=nvar+1;
+		}
+	      //check if S-H bond
+	      if((strcmp(atoms_data[i1].atom_name,"S")==0)&&(strcmp(atoms_data[i2].atom_name,"H")==0)&&(dist_matrix[i1][i2]<dist_SH)&&(igroupB[i][i2]!=1)&&(atomsintopB[i][i2]==1)){
+		igroupB[i][i2]=1;
+		nvar=nvar+1;
+	      }
+	      //check if H-N bond
+	      if((strcmp(atoms_data[i1].atom_name,"H")==0)&&(strcmp(atoms_data[i2].atom_name,"N")==0)&&(dist_matrix[i1][i2]<dist_NH)&&(igroupB[i][i2]!=1)&&(atomsintopB[i][i2]==1)){
+		igroupB[i][i2]=1;
+		nvar=nvar+1;
+		}
+	      //check if N-H bond
+	      if((strcmp(atoms_data[i1].atom_name,"N")==0)&&(strcmp(atoms_data[i2].atom_name,"H")==0)&&(dist_matrix[i1][i2]<dist_NH)&&(igroupB[i][i2]!=1)&&(atomsintopB[i][i2]==1)){
+		igroupB[i][i2]=1;
+		nvar=nvar+1;
+	      }
+	    }
+	  }
+	}
+      }
+      ncycle+=1;
+    }
+    //    exit(0);
+  }  
+
+
+  for (i=0;i<numrotors;i++) {
+    for (j=0;j<ATOMS;j++) {
+      igroupA[i][j]=0;
+      if (j==pivotA[i]-1){
+	igroupA[i][j]=1;
+      }
+    }
+  }
+  
+  for (i=0;i<numrotors;i++) {
+
+    ncountA=1;
+    nvar=1;
+    int ncycle=0;
+    while (nvar!=0 && ncycle < 1000){
+      nvar=0;
+      for (i1=0;i1<ATOMS;i1++) {
+	if(igroupA[i][i1]==1){
+	  for (i2=0;i2<ATOMS;i2++) {
+	    if(i2!=pivotB[i]-1){
+	      //check if C-H bond
+	      // printf("at i1 %d is %s and atom i2 %d is  %s and dist is  %lf  \n",i1,atoms_data[i1].atom_name,i2,atoms_data[i2].atom_name,dist_matrix[i1][i2]); 
+	      
+	      if((strcmp(atoms_data[i1].atom_name,"C")==0)&&(strcmp(atoms_data[i2].atom_name,"H")==0)&&(dist_matrix[i1][i2]<dist_CH)&&(igroupA[i][i2]!=1)&&(atomsintopA[i][i2]==1)){
+		igroupA[i][i2]=1;
+		nvar=nvar+1;
+		}
+	      //check if H-C bond
+	      if((strcmp(atoms_data[i1].atom_name,"H")==0)&&(strcmp(atoms_data[i2].atom_name,"C")==0)&&(dist_matrix[i1][i2]<dist_HC)&&(igroupA[i][i2]!=1)&&(atomsintopA[i][i2]==1)){
+		igroupA[i][i2]=1;
+		nvar=nvar+1;
+		}
+	      //check if C-C bond
+	      if((strcmp(atoms_data[i1].atom_name,"C")==0)&&(strcmp(atoms_data[i2].atom_name,"C")==0)&&(dist_matrix[i1][i2]<dist_CC)&&(igroupA[i][i2]!=1)&&(atomsintopA[i][i2]==1)){
+		  igroupA[i][i2]=1;
+		  nvar=nvar+1;
+		}
+	      //check if C-O bond
+	      if((strcmp(atoms_data[i1].atom_name,"C")==0)&&(strcmp(atoms_data[i2].atom_name,"O")==0)&&(dist_matrix[i1][i2]<dist_CO)&&(igroupA[i][i2]!=1)&&(atomsintopA[i][i2]==1)){
+		igroupA[i][i2]=1;
+		nvar=nvar+1;
+		}
+	      //check if O-C bond
+	      if((strcmp(atoms_data[i1].atom_name,"O")==0)&&(strcmp(atoms_data[i2].atom_name,"C")==0)&&(dist_matrix[i1][i2]<dist_CO)&&(igroupA[i][i2]!=1)&&(atomsintopA[i][i2]==1)){
+		igroupA[i][i2]=1;
+		nvar=nvar+1;
+	      }
+	      //check if O-O bond
+	      if((strcmp(atoms_data[i1].atom_name,"O")==0)&&(strcmp(atoms_data[i2].atom_name,"O")==0)&&(dist_matrix[i1][i2]<dist_OO)&&(igroupA[i][i2]!=1)&&(atomsintopA[i][i2]==1)){
+		igroupA[i][i2]=1;
+		nvar=nvar+1;
+		}
+	      //check if O-O bond
+	      if((strcmp(atoms_data[i1].atom_name,"O")==0)&&(strcmp(atoms_data[i2].atom_name,"O")==0)&&(dist_matrix[i1][i2]<dist_OO)&&(igroupA[i][i2]!=1)&&(atomsintopA[i][i2]==1)){
+		igroupA[i][i2]=1;
+		nvar=nvar+1;
+	      }
+	      //check if H-O bond
+	      if((strcmp(atoms_data[i1].atom_name,"H")==0)&&(strcmp(atoms_data[i2].atom_name,"O")==0)&&(dist_matrix[i1][i2]<dist_HO)&&(igroupA[i][i2]!=1)&&(atomsintopA[i][i2]==1)){
+		igroupA[i][i2]=1;
+		nvar=nvar+1;
+		}
+	      //check if O-H bond
+	      if((strcmp(atoms_data[i1].atom_name,"O")==0)&&(strcmp(atoms_data[i2].atom_name,"H")==0)&&(dist_matrix[i1][i2]<dist_OH)&&(igroupA[i][i2]!=1)&&(atomsintopA[i][i2]==1)){
+		igroupA[i][i2]=1;
+		nvar=nvar+1;
+	      }
+	      //check if H-S bond
+	      if((strcmp(atoms_data[i1].atom_name,"H")==0)&&(strcmp(atoms_data[i2].atom_name,"S")==0)&&(dist_matrix[i1][i2]<dist_SH)&&(igroupA[i][i2]!=1)&&(atomsintopA[i][i2]==1)){
+		igroupA[i][i2]=1;
+		nvar=nvar+1;
+		}
+	      //check if S-H bond
+	      if((strcmp(atoms_data[i1].atom_name,"S")==0)&&(strcmp(atoms_data[i2].atom_name,"H")==0)&&(dist_matrix[i1][i2]<dist_SH)&&(igroupA[i][i2]!=1)&&(atomsintopA[i][i2]==1)){
+		igroupA[i][i2]=1;
+		nvar=nvar+1;
+	      }
+	      //check if H-N bond
+	      if((strcmp(atoms_data[i1].atom_name,"H")==0)&&(strcmp(atoms_data[i2].atom_name,"N")==0)&&(dist_matrix[i1][i2]<dist_NH)&&(igroupA[i][i2]!=1)&&(atomsintopA[i][i2]==1)){
+		igroupA[i][i2]=1;
+		nvar=nvar+1;
+		}
+	      //check if N-H bond
+	      if((strcmp(atoms_data[i1].atom_name,"N")==0)&&(strcmp(atoms_data[i2].atom_name,"H")==0)&&(dist_matrix[i1][i2]<dist_NH)&&(igroupA[i][i2]!=1)&&(atomsintopA[i][i2]==1)){
+		igroupA[i][i2]=1;
+		nvar=nvar+1;
+	      }
+	    }
+	  }
+	}
+      }
+      ncycle+=1;
+    }
+    //  for (i=0;i<numrotors;i++){
+    //    for (j=0;j<ATOMS;j++){
+    //        printf("igroup A valueb for rot %d natom %d is %d  \n",i,j,igroupA[i][j]); 
+	    //	    printf("igroup B value for rot %d natom %d is %d  \n",i,j,igroupB[i][j]); 
+    //}
+    //  }
+
+    //    exit(0);
+  }  
+
+  /*
+  for (i=0;i<ATOMS;i++){
+    for (j=0;j<ATOMS;j++){
+      printf("distance between at %d and atom %d is %lf  \n",i,j,dist_matrix[i][j]); 
+    }
+  }
+  */
+
+  // determine inertia momentts for topA and topB
+
+  double IxxT,IyyT,IzzT;
+  double rotaxx,rotaxy,rotaxz;
+  double rotatx,rotaty,rotatz;
+  double distx,disty,distz;
+  double norm;
+  double distest;
+
+
+  for (i=0; i<numrotors; i++) {
+    rotaxx=(atoms_data[pivotA[i]-1].ext_coord_x[step]-atoms_data[pivotB[i]-1].ext_coord_x[step])/bohr;  
+    rotaxy=(atoms_data[pivotA[i]-1].ext_coord_y[step]-atoms_data[pivotB[i]-1].ext_coord_y[step])/bohr;  
+    rotaxz=(atoms_data[pivotA[i]-1].ext_coord_z[step]-atoms_data[pivotB[i]-1].ext_coord_z[step])/bohr;  
+    norm=dist_matrix[pivotA[i]-1][pivotB[i]-1];
+    IxxT=0;
+    IyyT=0;
+    IzzT=0;
+    for (j=0; j<ATOMS; j++) {
+      if(igroupA[i][j]==1){
+	rotatx=(atoms_data[j].ext_coord_x[step]-atoms_data[pivotA[i]-1].ext_coord_x[step])/bohr;  
+	rotaty=(atoms_data[j].ext_coord_y[step]-atoms_data[pivotA[i]-1].ext_coord_y[step])/bohr;  
+	rotatz=(atoms_data[j].ext_coord_z[step]-atoms_data[pivotA[i]-1].ext_coord_z[step])/bohr;  
+
+	cross_prod(rotatx,rotaty,rotatz,rotaxx,rotaxy,rotaxz,&distx,&disty,&distz);
+	IxxT=IxxT+distx*distx*(atoms_data[j].atomic_mass)/norm/norm;
+	IyyT=IyyT+disty*disty*(atoms_data[j].atomic_mass)/norm/norm;
+	IzzT=IzzT+distz*distz*(atoms_data[j].atomic_mass)/norm/norm;
+	distest=sqrt((distx*distx+disty*disty+distz*distz))/norm;
+	//	printf("j is %d norm is %lf and dist is %lf \n",j,norm,distest);
+      }
+    }
+    ItopA[i]=IxxT+IyyT+IzzT;
+    //    printf("ItopA of rotor %d is  %lf \n",i,ItopA[i]);
+    //    exit(0);
+  }
+
+  // now compute the same for the B top
+
+
+  for (i=0; i<numrotors; i++) {
+    rotaxx=(atoms_data[pivotB[i]-1].ext_coord_x[step]-atoms_data[pivotA[i]-1].ext_coord_x[step])/bohr;  
+    rotaxy=(atoms_data[pivotB[i]-1].ext_coord_y[step]-atoms_data[pivotA[i]-1].ext_coord_y[step])/bohr;  
+    rotaxz=(atoms_data[pivotB[i]-1].ext_coord_z[step]-atoms_data[pivotA[i]-1].ext_coord_z[step])/bohr;  
+    norm=dist_matrix[pivotB[i]-1][pivotA[i]-1];
+    IxxT=0;
+    IyyT=0;
+    IzzT=0;
+    for (j=0; j<ATOMS; j++) {
+      if(igroupB[i][j]==1){
+	rotatx=(atoms_data[j].ext_coord_x[step]-atoms_data[pivotB[i]-1].ext_coord_x[step])/bohr;  
+	rotaty=(atoms_data[j].ext_coord_y[step]-atoms_data[pivotB[i]-1].ext_coord_y[step])/bohr;  
+	rotatz=(atoms_data[j].ext_coord_z[step]-atoms_data[pivotB[i]-1].ext_coord_z[step])/bohr;  
+
+	cross_prod(rotatx,rotaty,rotatz,rotaxx,rotaxy,rotaxz,&distx,&disty,&distz);
+	IxxT=IxxT+distx*distx*(atoms_data[j].atomic_mass)/norm/norm;
+	IyyT=IyyT+disty*disty*(atoms_data[j].atomic_mass)/norm/norm;
+	IzzT=IzzT+distz*distz*(atoms_data[j].atomic_mass)/norm/norm;
+	distest=sqrt((distx*distx+disty*disty+distz*distz))/norm;
+	//	printf("j is %d norm is %lf and dist is %lf \n",j,norm,distest);
+      }
+    }
+    ItopB[i]=IxxT+IyyT+IzzT;
+    //    printf("ItopB of rotor %d is  %lf \n",i,ItopB[i]);
+    //    exit(0);
+  }
+
+  /*  
+  for (i=0;i<numrotors;i++){
+    for (j=0;j<ATOMS;j++){
+            printf("igroup A value for rot %d natom %d is %d  \n",i,j,igroupA[i][j]); 
+	    //	    printf("igroup B value for rot %d natom %d is %d  \n",i,j,igroupB[i][j]); 
+    }
+  }
+  for (i=0;i<numrotors;i++){
+    for (j=0;j<ATOMS;j++){
+	    printf("igroup B value for rot %d natom %d is %d  \n",i,j,igroupB[i][j]); 
+    }
+  }
+  */
+  //  exit(0);
+  
+
+
+  for (i=0;i<numrotors;i++){
+    natomsA[i]=0;
+    natomsB[i]=0;
+    for (j=0;j<ATOMS;j++){
+      if(igroupA[i][j] == 1 ){
+	natomsA[i]+=1;
+      } 
+      if(igroupB[i][j] == 1 ){
+	natomsB[i]+=1;
+      } 
+    }
+  }
+
+
+  // of the two tops identified I take the one with the smallest inertia moment    
+
+  
+  
+  int indred;
+
+  indred=0;
+  
+  for (i=0;i<numrotors;i++){
+    if(natomsA[i] < numatomsintopA[i]){indred=1;}
+    if(natomsB[i] < ATOMS-1-numatomsintopA[i]){indred=2;}
+    indred=0;
+    for (j=0;j<ATOMS;j++){
+      //      printf("igroup B value for rot %d natom %d is %d  \n",i,j,igroupB[i][j]); 
+      if(ItopB[i]==0 ){
+	igroupB[i][j]=0;
+      } 
+      else if(ItopA[i] < ItopB[i] && indred == 0){
+	igroupB[i][j]=0;
+      } 
+      else if(ItopA[i] < ItopB[i] && indred == 1){
+	igroupB[i][j]=0;
+      } 
+      else if(ItopA[i] < ItopB[i] && indred == 2){
+	igroupA[i][j]=0;
+      } 
+      else {
+	igroupA[i][j]=0;
+      }
+    }
+  }
+          
+ 
+  /*  
+  for (i=0;i<numrotors;i++){
+    for (j=0;j<ATOMS;j++){
+            printf("igroup A value for rot %d natom %d is %d  \n",i,j,igroupA[i][j]); 
+	    //	    printf("igroup B value for rot %d natom %d is %d  \n",i,j,igroupB[i][j]); 
+    }
+  }
+  for (i=0;i<numrotors;i++){
+    for (j=0;j<ATOMS;j++){
+	    printf("igroup B value for rot %d natom %d is %d  \n",i,j,igroupB[i][j]); 
+    }
+  }
+  */
+  //  exit(0);
+
+}
+
 
 void projector_matrix_Rot(int step){
 
@@ -2454,7 +3870,6 @@ void projector_matrix_Rot(int step){
 
   conv=joule*bohr*bohr/a_mass*1.0e10*1.0e10;
   
-
   for (j=0;j<3*ATOMS;j++){
     for (k=0;k<3*ATOMS;k++){
       Hessian[step][j][k]=Hessian[step][j][k]*conv; 
@@ -2463,7 +3878,6 @@ void projector_matrix_Rot(int step){
 
 
   // now project the Hessian and construct the internal force constant matrix
-
 
   //double **I_temp;
   
@@ -2521,6 +3935,8 @@ void projector_matrix_Rot(int step){
     }
   }
   
+  //  printf("Hessian ibefore diag 1,1 %lf\n",FC_temp[1][1]);
+
   jacobi(FC_temp, dim-1, lambda, L, nrot);
   eigsrt(lambda, L, dim-1);
 
@@ -2558,6 +3974,7 @@ void projector_matrix_Rot(int step){
     }
   }
 
+  /*
   int **igroupA;
   igroupA = (int **) malloc(numrotors*sizeof(int *));
   for(j=0; j < numrotors; j++) {
@@ -2580,7 +3997,7 @@ void projector_matrix_Rot(int step){
       }
     }
   }
-
+  */
   /*
   double *cmAx,*cmAy,*cmAz;
   double *cmBx,*cmBy,*cmBz;
@@ -2677,7 +4094,7 @@ void projector_matrix_Rot(int step){
 	Dmatrot[3*j+2][i]=p31z*sqrt(atoms_data[j].atomic_mass);
 	//	redA[i]+=Dmatrot[3*j][i]+Dmatrot[3*j+1][i]+Dmatrot[3*j+2][i];
       }
-      else{
+      else if(igroupB[i][j]==1) {
 	e32x=coords[j][0]-coords[pivotB[i]-1][0];
        	e32y=coords[j][1]-coords[pivotB[i]-1][1];
 	e32z=coords[j][2]-coords[pivotB[i]-1][2];
@@ -2861,6 +4278,8 @@ void projector_matrix_Rot(int step){
       FC_temprot[i][j]= FMIpro[i-1][j-1];
     }
   }
+
+
   
   jacobi(FC_temprot, dim-1, lambdarot, Lrot, nrot);
   eigsrt(lambdarot, Lrot, dim-1);
@@ -2884,6 +4303,28 @@ void projector_matrix_Rot(int step){
 
   fclose(hrproj_freq);
 
+  if(intcoord==1){
+
+    // convert back to atomic units
+
+    conv=joule*bohr*bohr/a_mass*1.0e10*1.0e10;
+  
+    //    printf("Hessian in proj funct 1,1 %lf\n",Hessian[step][0][0]);
+
+    for (j=0;j<3*ATOMS;j++){
+      for (k=0;k<3*ATOMS;k++){
+	FMIpro[j][k]=FMIpro[j][k]/conv; 
+      }
+    }
+
+    intcoord_hessian(FMIpro,gradient[step]);
+
+    for(i=0;i<(dim-6);i++){ free (Lcartint[i]);}free(Lcartint);
+    free(Freqint);
+    //  exit(0);
+  } 
+
+
   //  todo free all vectors and matrixes
 
   for(i=0;i<dim;i++){free(Lrot[i]);}free(Lrot);
@@ -2901,6 +4342,7 @@ void projector_matrix_Rot(int step){
   free(lambda_rev);
   for(i=0;i<3*ATOMS;i++){free(Vmwmat[i]);}free(Vmwmat);
   for(i=0;i<numrotors;i++){free(igroupA[i]);}free(igroupA);
+  for(i=0;i<numrotors;i++){free(igroupB[i]);}free(igroupB);
   for(i=0;i<3*ATOMS;i++){free(Dmatrot[i]);}free(Dmatrot);
   free(lambda);
   for(i=0;i<3*ATOMS-external+1;i++){free(L[i]);}free(L);
@@ -3138,11 +4580,12 @@ double **projector_matrix(double **P, int step){
 
   tot=sqrt(tot);
  
-  for(i=0;i<3*ATOMS;i++){
-    Liy_rc[i]=-Liy_rc[i]/tot; 
-    //    Liy_rc[i]=0.;
-    printf("%lf\t %lf\n", Liy_rc[i],gradient[step][i]);
-    
+  if(tot!=0){
+    for(i=0;i<3*ATOMS;i++){
+      Liy_rc[i]=-Liy_rc[i]/tot; 
+      //    Liy_rc[i]=0.;
+      printf("%lf\t %lf\n", Liy_rc[i],gradient[step][i]);    
+    }
   }
 
   // genero la matrice P e la matrice I
@@ -3164,11 +4607,11 @@ double **projector_matrix(double **P, int step){
   free(Liy_rot1); free(Liy_rot2); free(Liy_rot3); free(Liy_tr1);free(Liy_tr2);free(Liy_tr3);free(Liy_rc);
   for(i=0;i<4;i++){free(I_1[i]);}free(I_1);
 
-
+  /*
   for(i=0;i<3*ATOMS;i++){
     printf("proj value at i %d is %lf \n",i,P[i][6]);
   }
-
+  */
   //  exit(-1);
 
 
@@ -3265,6 +4708,57 @@ double **prod_mat2(double **A, int dim1, int dim2, double **B, int dim3, int dim
   }
 
   return Prod;
+
+}
+
+
+double **invert_matrix(double **A, int dim){
+  
+  int i,j;
+  double **AM1;
+  double **Atemp;
+  double **AM1temp;
+
+
+  AM1=(double **) malloc( dim*sizeof(double *) );
+  for(j=0; j < dim; j++) {
+    AM1[j]= (double*) malloc( dim*sizeof(double) );
+  }
+
+  Atemp=(double **) malloc( (dim+1)*sizeof(double *) );
+  for(j=0; j < dim+1; j++) {
+    Atemp[j]= (double*) malloc( (dim+1)*sizeof(double) );
+  }
+  AM1temp=(double **) malloc( (dim+1)*sizeof(double *) );
+  for(j=0; j < dim+1; j++) {
+    AM1temp[j]= (double*) malloc( (dim+1)*sizeof(double) );
+  }
+
+  for(i=0;i<dim+1;i++){
+    for(j=0;j<dim+1;j++){
+      Atemp[i][j]=0.;
+      AM1temp[i][j]=0.;
+    }
+  }
+    
+  for(i=0;i<dim;i++){
+    for(j=0;j<dim;j++){
+      Atemp[i+1][j+1]=A[i][j];
+    }
+  }
+
+  AM1temp=inverse_matrix(Atemp,dim,AM1temp);
+
+  for(i=1;i<dim+1;i++){
+    for(j=1;j<dim+1;j++){
+      AM1[i-1][j-1]=AM1temp[i][j];
+    }
+  }
+
+  for(i=0;i<(dim);i++){ free (Atemp[i]); } free(Atemp);
+  for(i=0;i<(dim);i++){ free (AM1temp[i]); } free(AM1temp);
+  
+  return AM1;
 
 }
 

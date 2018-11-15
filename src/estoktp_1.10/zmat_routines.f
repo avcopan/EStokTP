@@ -1,4 +1,4 @@
-c a set of programa to read and convert z-matrixes
+c a set of programa to read and convert z-matrices
 c Copyright (C) 2018  by Carlo Cavallotti and Matteo Pelucchi, Politecnico di MIlano, Italy
 c and Stephen J. Klippenstein, Argonne National Laboratories, USA.
 c This program is free software: you can redistribute it and/or modify
@@ -107,6 +107,11 @@ cc now determine connectivity in terms of progressive atom numbering
          write(*,*)'at ',j,' conn is: ',ibconn(j),iaconn(j),idconn(j)
       enddo
 
+      do j=1,natomt
+         write(*,*)'at ',j,'bond and dihed are: ',bname(j),anname(j)
+     +        ,dname(j)
+      enddo
+
 cc now check for dummy atoms
       ndummy=0
       do j=1,natomt
@@ -121,7 +126,7 @@ cc now check for dummy atoms
          else
             idummy(j)=0
          endif
-c         write(*,*)'idummy is j: ',j, idummy(j)
+         write(*,*)'idummy is j: ',j, idummy(j)
       enddo
       isited=0
       jsited=0
@@ -136,9 +141,9 @@ c         write(*,*)'idummy is j: ',j, idummy(j)
          if(idummy(j).eq.0)ksited=ksited+1
       enddo
 
-      write(*,*)'isite isited ',isite,isited
-      write(*,*)'jsite jsited ',jsite,jsited
-      write(*,*)'ksite ksited ',ksite,ksited
+c      write(*,*)'isite isited ',isite,isited
+c      write(*,*)'jsite jsited ',jsite,jsited
+c      write(*,*)'ksite ksited ',ksite,ksited
 
       write(*,*)'out of read_zmat'
 
@@ -149,7 +154,7 @@ c ******************************************************
 
       subroutine update_zmat(natom,natomt,intcoor,bislab,ibconn,iaconn
      $ ,idconn,bname,anname,dname,atname,coox,cooy,cooz,xint,tauopt
-     $ ,ntau,idummy,ilin,aconnt,bconnt,dconnt,atomlabel)
+     $ ,ntau,idummy,ilin,aconnt,bconnt,dconnt,atomlabel,ifilu)
 
       implicit double precision (a-h,o-z)
 
@@ -161,9 +166,12 @@ c
       dimension xint(3*natommx)
       dimension xintt(3*natommx)
       dimension coox(natommx),cooy(natommx),cooz(natommx)
+      dimension cooxs(natommx),cooys(natommx),coozs(natommx)
       dimension cooxt(natommx),cooyt(natommx),coozt(natommx)
       dimension tauopt(ntaumx)
       dimension idummy(natommx)
+
+      character*1 aname1(natommx)
       character*30 intcoor(3*natommx)
       character*20 bislab(ntaumx)
       character*20 cname
@@ -177,6 +185,8 @@ c
 
       include 'filcomm.f'
 
+c      write(*,*)'ifile is ',1
+c      stop
 
       nint = natom*3-6-ntau
       if (natom.eq.2) nint=1
@@ -190,34 +200,51 @@ c
          tauopt(j)=0.
       enddo
 
-      open (unit=98,status='unknown')
       do j=1,natom
-         write(98,*)atname(j),coox(j),cooy(j),cooz(j)
+         cooxs(j)=coox(j)
+         cooys(j)=cooy(j)
+         coozs(j)=cooz(j)
       enddo
-      close(98)
+
+c      open (unit=98,status='unknown')
+c      do j=1,natom
+c         write(98,*)atname(j),coox(j),cooy(j),cooz(j)
+c      enddo
+c      close(98)
 c      stop
 
 
 c rototraslate the xyz matrix
+c      write(*,*)'ilin = ',ilin
+c      do j=1,natom
+c         write(*,*)'in config ',coox(j),cooy(j),cooz(j)
+c      enddo
+
+
       call rototrasl(natom,coox,cooy,cooz,ilin)
+
+c      do j=1,natom
+c         write(*,*)'out config ',coox(j),cooy(j),cooz(j)
+c      enddo
+
 cc
 cc write xyz matrix   
 
-      open (unit=97,status='unknown')
-      do j=1,natom
-         write(97,*)atname(j),coox(j),cooy(j),cooz(j)
-      enddo
-      write(97,*)'ilin is',ilin
-      close(97)
+c      open (unit=97,status='unknown')
+c      do j=1,natom
+c         write(97,*)atname(j),coox(j),cooy(j),cooz(j)
+c      enddo
+c      write(97,*)'ilin is',ilin
+c      close(97)
 c      stop
 
 cc first introduce fake coordinates for dummy atoms
 cc to be consistent with numering in input z-mat
 
       ind=0
+      iangname=0
       do j=1,natomt
-         iangname=0
-         write(*,*)'idummy is ', j,idummy(j)
+c         write(*,*)'idummy is ', j,idummy(j)
          if(idummy(j).eq.0) then
             ind=ind+1
             cooxt(j)=coox(ind)
@@ -269,8 +296,6 @@ c            if(iabs.eq.1.and.ireact.gt.3) write (99,*) dname(j)
                   endif
                endif
             enddo
-c            write(*,*)'iangindex is',iangindex
-c            stop
 c
             if (iangindex.ne.0) then
                adist2=bd**2
@@ -283,18 +308,11 @@ c
                alfa=ang
                dc=0.
                call distang(da,db,dc,alfa)
-c               write(*,*)'dc is',dc
-c               stop
                bdist2=dc**2
                iat3=iangindex
                itestind=0
                if(bconnt(iat3).eq.atname(j))itestind=1
-c               write(*,*)'itestind is ',itestind
-c               write(*,*)'atname is ',atname(j)
-c               write(*,*)'bconn is ',bconnt(iat3)
                if(aconnt(iat3).eq.atname(j))itestind=1
-c               write(*,*)'itestind is ',itestind
-c               write(*,*)'anname is ',aconnt(iat3)
                if(itestind.eq.1)then
                   write(*,*)'found reference atom for dummy atom3'
                endif
@@ -321,7 +339,6 @@ c               write(*,*)'anname is ',aconnt(iat3)
                iatemp3=iatemp3-icorr
                iac=iatemp3
 
-               write(*,*)'ibconn',iatemp2
                da=sqrt((coox(iai)-coox(iab))**2+
      $                    (cooy(iai)-cooy(iab))**2+
      $                    (cooz(iai)-cooz(iab))**2)
@@ -329,10 +346,6 @@ c               write(*,*)'anname is ',aconnt(iat3)
                db=sqrt((coox(iac)-coox(iatemp2))**2+
      $                    (cooy(iac)-cooy(iatemp2))**2+
      $                    (cooz(iac)-cooz(iatemp2))**2)
-               write(*,*)'da is',da
-               write(*,*)'db is',db
-
-c               db=bd
 
                open (unit=99,status='unknown')
                rewind (99)
@@ -345,103 +358,42 @@ c               db=bd
                read(99,*) ang_abc
                close(99)
 
-               write(*,*)'dihed is',dih_ia
-               write(*,*)'ang_abc is',ang_abc
+c               write(*,*)'dihed is',dih_ia
+c               write(*,*)'ang_abc is',ang_abc
                if(dih_ia.eq.180.)then
                   write(*,*)'recognized opposite planar configuration'
                else
-                  write(*,*)'failed z-mat conv. in routine upfate_zmat' 
+c                  write(*,*)'failed z-mat conv. in routine update_zmat' 
                endif
                dac=sqrt((coox(iai)-coox(iac))**2+
      $                    (cooy(iai)-cooy(iac))**2+
      $                    (cooz(iai)-cooz(iac))**2)
 
-c               dac=dac-0.01
-c               write(*,*)'dac is',dac
-c               write(*,*)'da+db is',da+db
-c               if(abs(dac-da-db).gt.0.5)then
-c                  alfa=180.-ang_abc
-c               else
                alfa2=0.
-               call distang2(da,db,dac,alfa2)
+               if(abs(dac-da-db).gt.1.0e-6)then
+                  call distang2(da,db,dac,alfa2)
+               else
+                  alfa2=180.
+               endif
                alfa=alfa2-ang_abc
-c               endif
                
-c               stop
                db=bd
-c              write(*,*)'alfa is ',alfa
-c              stop
                call distang(da,db,dc,alfa)
-c               write(*,*)'dc ',dc
-c               stop
-c               adist2=da**2
-c               bdist2=db**2
                cdist2=dc**2
                icorr=0
                do jk=1,iat3-1
                   if(idummy(jk).eq.1)icorr=icorr+1
                enddo
                iat3=iat3-icorr
-c               write(*,*)'adist2 ', adist2
-c               write(*,*)'bdist2 ', bdist2
-c               write(*,*)'cdist2 ', cdist2
-c               write(*,*)'iat1 ',iat1 
-c               write(*,*)'iat2 ',iat2 
-c               write(*,*)'iat3 ',iat3 
-c               write(*,*)'cooxa1 ',coox(iat1)
-c               write(*,*)'cooya1 ',cooy(iat1)
-c               write(*,*)'cooza1 ',cooz(iat1)
-c               write(*,*)'cooxa2 ',coox(iat2)
-c               write(*,*)'cooya2 ',cooy(iat2)
-c               write(*,*)'cooza2 ',cooz(iat2)
-c               write(*,*)'cooxa3 ',coox(iat3)
-c               write(*,*)'cooya3 ',cooy(iat3)
-c               write(*,*)'cooza3 ',cooz(iat3)
-c               check if colinear on x, y or z axis
-c               ichangex=0
-c               ichangey=0
-c               ichangez=0
-c               if(abs(coox(iat1)-coox(iat2)).lt.0.2.and.
-c     +            abs(coox(iat2)-coox(iat3)).lt.0.2.and.
-c     +            abs(coox(iat1)-coox(iat3)).lt.0.2)then
-c                  ichangex=1
-c                  coox(iat3)= coox(iat3)+0.01
-c               endif
-c               if(abs(cooy(iat1)-cooy(iat2)).lt.0.2.and.
-c     +            abs(cooy(iat2)-cooy(iat3)).lt.0.2.and.
-c     +            abs(cooy(iat1)-cooy(iat3)).lt.0.2)then
-c                  ichangey=1
-c                  cooy(iat3)= cooy(iat3)+0.01
-c               endif
-c               if(abs(cooz(iat1)-cooz(iat2)).lt.0.2.and.
-c     +            abs(cooz(iat2)-cooz(iat3)).lt.0.2.and.
-c     +            abs(cooz(iat1)-cooz(iat3)).lt.0.2)then
-c                  ichangez=1
-c                  cooz(iat3)= cooz(iat3)+0.01
-c               endif
 
                call twoan_to_xyz(adist2,bdist2,cdist2,coox(iat1)
      $  ,cooy(iat1),cooz(iat1),coox(iat2),cooy(iat2),cooz(iat2),
      $  coox(iat3),cooy(iat3),cooz(iat3),xa,ya,za)
 
-c              if(ichangex.eq.1)then
-c                 coox(iat1)= coox(iat1)-0.01
-c              endif
-c              if(ichangex.eq.1)then
-c                  cooy(iat1)= cooy(iat1)-0.01
-c               endif
-c               if(ichangex.eq.1)then
-c                  cooz(iat1)= cooz(iat1)-0.01
-c               endif
-
-c               write(*,*)'xa is ',xa
-c               write(*,*)'ya is ',ya
-c              write(*,*)'za is ',za
 
                cooxt(j)=xa
                cooyt(j)=ya
                coozt(j)=za
-c               stop
             else
 cc it is assumed a dummy atom is on the z axis with y=0 perp to atom2 or 1 
                open (unit=99,status='unknown')
@@ -466,45 +418,37 @@ c               write(*,*) 'working on that'
          else
 c            write(*,*)'j is ', j
             open (unit=99,status='unknown')
-            rewind (99)
+c            rewind (99)
             write (99,*) bname(j)
             write (99,*) anname(j)
 c            if(iabs.eq.1.and.ireact.gt.3) write (99,*) dname(j)
-            if(ireact.gt.3) then
+c            if(ireact.gt.3) then
+            if(j.gt.3) then
                do ij=1,nint
                   if(intcoor(ij).eq.dname(j))then
                      iangname=1
 c                     write(99,*)'iname is ',iname
                      write (99,*) xintt(ij)
 c                     stop
-                 endif
+                  endif
                enddo
                if(iangname.eq.0)then
                   write (99,*) dname(j)
-                  iangname=0
+c                  iangname=0
                endif
             endif
             rewind (99)
             read(99,*)bd
             read(99,*)ang
-c            if(iabs.eq.1.and.ireact.gt.3)read(99,*)dihed
-            if(ireact.gt.3)read(99,*)dihed
+            if(j.gt.3)read(99,*)dihed
             close(99)
-c            write(bd,"(f8.4)")bname(j)
-c            write(ang,"(f8.4)")anname(j)
-c            write(dihed,"(f8.4)")dname(j)
-            
-c            write(*,*)'iaconnj is ', iaconn(j)
-c            dihed=dihed+0.1
-c            ang=ang+0.1
+
 c            write(*,*)'bd is ',bd
 c            write(*,*)'ang is ', ang
 c            write(*,*)'dihed is ', dihed
+c            write(*,*)'check dummy iangname',iangname
+c            write(*,*)'check dummy ireact',ireact
 
-c            call zmat_to_xyz(xa,ya,za,coox(ibconn(j)),cooy(ibconn(j)),
-c     $ cooz(ibconn(j)),coox(iaconn(j)),cooy(iaconn(j)),cooz(iaconn(j)),
-c     $ coox(idconn(j)),cooy(idconn(j)),cooz(idconn(j)),
-c     $ bd,ang,dihed)
             if(iangname.eq.0)then
             call zmat_to_xyz(xa,ya,za,cooxt(ibconn(j)),cooyt(ibconn(j)),
      $ coozt(ibconn(j)),cooxt(iaconn(j)),cooyt(iaconn(j)),
@@ -517,22 +461,22 @@ c     $ bd,ang,dihed)
                iat1=iaconn(j)
                ang1=ang
 c               write(*,*) 'working on that'
-               write(*,*)'dist1 ', dist1
-               write(*,*)'iat1 ', iat1
+c               write(*,*)'dist1 ', dist1
+c               write(*,*)'iat1 ', iat1
                icorr=0
                do jk=1,iat1-1
                   if(idummy(jk).eq.1)icorr=icorr+1
                enddo
                iat1=iat1-icorr
-               write(*,*)'iat1 ', iat1
+c               write(*,*)'iat1 ', iat1
                icorr=0
                do jk=1,iat2-1
                   if(idummy(jk).eq.1)icorr=icorr+1
                enddo
                iat2=iat2-icorr
-               write(*,*)'iat2 ', iat2
-               write(*,*)'ang1 is ',ang
-               write(*,*)'j is ',j
+c               write(*,*)'iat2 ', iat2
+c               write(*,*)'ang1 is ',ang
+c               write(*,*)'j is ',j
                jind=j
                icheckang=0
                do jind=j+1,natomt
@@ -541,13 +485,13 @@ c               write(*,*) 'working on that'
                   icheckang=1
 c                  iat3=j+1
                   iat3=jind
-                  write(*,*)'iat3 ', iat3
+c                  write(*,*)'iat3 ', iat3
                   icorr=0
                   do jk=1,iat3-1
                      if(idummy(jk).eq.1)icorr=icorr+1
                   enddo
                   iat3=iat3-icorr
-                  write(*,*)'iat3 ', iat3
+c                  write(*,*)'iat3 ', iat3
                   do ij=1,nint
 c                     if(intcoor(ij).eq.anname(j+1))then
                      if(intcoor(ij).eq.anname(jind))then
@@ -604,35 +548,29 @@ c               stop
 c            write(*,*)'xa is ,',xa
 c            write(*,*)'ya is ,',ya
 c            write(*,*)'za is ,',za
-c            write(*,*)'x1 is ,',cooxt(ibconn(j))
-c            write(*,*)'y1 is ,',cooyt(ibconn(j))
-c            write(*,*)'z1 is ,',coozt(ibconn(j))
-c            write(*,*)'x2 is ,',cooxt(iaconn(j))
-c            write(*,*)'y2 is ,',cooyt(iaconn(j))
-c            write(*,*)'z2 is ,',coozt(iaconn(j))
-c            write(*,*)'x3 is ,',cooxt(idconn(j))
-c            write(*,*)'y3 is ,',cooyt(idconn(j))
-c            write(*,*)'z3 is ,',coozt(idconn(j))
-c            stop
 
          endif
-c        write(*,*)'cooxj is ,',cooxt(j)
-c        write(*,*)'cooyj is ,',cooyt(j)
-c        write(*,*)'coozj is ,',coozt(j)
       enddo
 
-c      open (unit=99,status='unknown')
-      do j=1,natomt
-         write(*,*)atname(j),cooxt(j),cooyt(j),coozt(j)
-      enddo
-c      close(99)
+c      write(*,*)'ok 1'
 c      stop
-
+      if(ifilu.eq.1)then         
+         open (unit=99,file='struct.xyz',status='unknown')
+         write(99,*)natomt
+         write(99,*)'xyz zmat from update z.mat with dummies'
+         do j=1,natomt
+            aname1(j)=atname(j)
+            write(99,*)aname1(j),cooxt(j),cooyt(j),coozt(j)
+         enddo
+         close(99)
+      endif
+c      stop
 
 
 cc  update  nint intcoor variables
 
       do j=1,nint
+c         write(*,*)'updating var j ',j,intcoor(j)
          ind=0
          do i=1,natomt
             if(intcoor(j).eq.bname(i)) then
@@ -641,79 +579,117 @@ cc  update  nint intcoor variables
      $        +(coozt(i)-coozt(ibconn(i)))**2)      
             endif
             if(intcoor(j).eq.anname(i)) then
-               open (unit=99,file='dihed.dat',status='unknown')
-               write(99,*)cooxt(i),cooyt(i),coozt(i)
-               ianum=ibconn(i)
-               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
-               ianum=iaconn(i)
-               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
-               ianum=idconn(i)
-               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
-               close(99)
-               call dihedral
-               open(unit=23,file='dihed.res',status='unknown')
-               read(23,*)xint(j)
-               close(23)
+c               open (unit=99,file='dihed.dat',status='unknown')
+c               write(99,*)cooxt(i),cooyt(i),coozt(i)
+c               ianum=ibconn(i)
+c               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
+c               ianum=iaconn(i)
+c               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
+c               ianum=idconn(i)
+c               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
+c               close(99)
+c               call dihedral
+c               open(unit=23,file='dihed.res',status='unknown')
+c               read(23,*)xint(j)
+c               close(23)
+               ib=ibconn(i)
+               ia=iaconn(i)
+               id=idconn(i)
+               call xyz_to_zmat(cooxt(i),cooyt(i),coozt(i),cooxt(ib),
+     +              cooyt(ib),coozt(ib),cooxt(ia),cooyt(ia),coozt(ia),
+     +              cooxt(id),cooyt(id),coozt(id),ang,dihed) 
+               xint(j)=ang
+
             endif
             if(intcoor(j).eq.dname(i)) then
-               open (unit=99,file='dihed.dat',status='unknown')
-               write(99,*)cooxt(i),cooyt(i),coozt(i)
-               ianum=ibconn(i)
-               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
-               ianum=iaconn(i)
-               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
-               ianum=idconn(i)
-               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
-               close(99)
-               call dihedral
-               open(unit=23,file='dihed.res',status='unknown')
-               read(23,*)cjunk
-               read(23,*)xint(j)
-               close(23)
+c               open (unit=99,file='dihed.dat',status='unknown')
+c               write(99,*)cooxt(i),cooyt(i),coozt(i)
+c               ianum=ibconn(i)
+               ib=ibconn(i)
+c               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
+c               ianum=iaconn(i)
+               ia=iaconn(i)
+c               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
+c               ianum=idconn(i)
+               id=idconn(i)
+c               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
+c               close(99)
+c               call dihedral
+c               open(unit=23,file='dihed.res',status='unknown')
+c               read(23,*)cjunk
+c               read(23,*)xint(j)
+c               close(23)
+               call xyz_to_zmat(cooxt(i),cooyt(i),coozt(i),cooxt(ib),
+     +              cooyt(ib),coozt(ib),cooxt(ia),cooyt(ia),coozt(ia),
+     +              cooxt(id),cooyt(id),coozt(id),ang,dihed) 
+               xint(j)=dihed
             endif
          enddo
-         write(*,*)'xint is',j,xint(j)
+c         write(*,*)'xint is',j,xint(j)
       enddo
+c      write(*,*)'ok 3'
+c      stop
 
       do j=1,ntau
          nprog=natom*3-6-ntau+j
+c         write(*,*)'nprog is ',nprog
          do i=1,natomt
             if(bislab(j).eq.bname(i)) then
                tauopt(j)=sqrt((cooxt(i)-cooxt(ibconn(i)))**2+
      $       (cooyt(i)-cooyt(ibconn(i)))**2+(coozt(i)-coozt(ibconn(i))))      
             endif
             if(intcoor(j).eq.anname(i)) then
-               open (unit=99,file='dihed.dat',status='unknown')
-               write(99,*)cooxt(i),cooyt(i),coozt(i)
-               ianum=ibconn(i)
-               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
-               ianum=iaconn(i)
-               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
-               ianum=idconn(i)
-               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
-               close(99)
-               call dihedral
-               open(unit=23,file='dihed.res',status='unknown')
-               read(23,*)tauopt(j)
-               close(23)
+c               open (unit=99,file='dihed.dat',status='unknown')
+c               write(99,*)cooxt(i),cooyt(i),coozt(i)
+c               ianum=ibconn(i)
+c               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
+c               ianum=iaconn(i)
+c               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
+c               ianum=idconn(i)
+c               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
+c               close(99)
+c               call dihedral
+c               open(unit=23,file='dihed.res',status='unknown')
+c               read(23,*)tauopt(j)
+c               close(23)
+               ib=ibconn(i)
+               ia=iaconn(i)
+               id=idconn(i)
+               call xyz_to_zmat(cooxt(i),cooyt(i),coozt(i),cooxt(ib),
+     +              cooyt(ib),coozt(ib),cooxt(ia),cooyt(ia),coozt(ia),
+     +              cooxt(id),cooyt(id),coozt(id),ang,dihed) 
+               tauopt(j)=ang
             endif
             if(intcoor(j).eq.dname(i)) then
-               open (unit=99,file='dihed.dat',status='unknown')
-               write(99,*)cooxt(i),cooyt(i),coozt(i)
-               ianum=ibconn(i)
-               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
-               ianum=iaconn(i)
-               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
-               ianum=idconn(i)
-               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
-               close(99)
-               call dihedral
-               open(unit=23,file='dihed.res',status='unknown')
-               read(23,*)cjunk
-               read(23,*)tauopt(j)
-               close(23)
+c               open (unit=99,file='dihed.dat',status='unknown')
+c               write(99,*)cooxt(i),cooyt(i),coozt(i)
+c               ianum=ibconn(i)
+c               ib=ibconn(i)
+c               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
+c               ianum=iaconn(i)
+c               ia=iaconn(i)
+c               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
+c               ianum=idconn(i)
+c               id=idconn(i)
+c               write(99,*)cooxt(ianum),cooyt(ianum),coozt(ianum)
+c               close(99)
+c               call dihedral
+c               open(unit=23,file='dihed.res',status='unknown')
+c               read(23,*)cjunk
+c               read(23,*)tauopt(j)
+c               close(23)
+               ib=ibconn(i)
+               ia=iaconn(i)
+               id=idconn(i)
+               call xyz_to_zmat(cooxt(i),cooyt(i),coozt(i),cooxt(ib),
+     +              cooyt(ib),coozt(ib),cooxt(ia),cooyt(ia),coozt(ia),
+     +              cooxt(id),cooyt(id),coozt(id),ang,dihed) 
+               tauopt(j)=dihed
             endif
          enddo
+c      write(*,*)'ok 4'
+
+
          if (tauopt(itau).gt.360.0d0) tauopt(itau) = 
      $        tauopt(itau) - 360.0d0
          if (tauopt(itau).lt.0.0d0) tauopt(itau) = 
@@ -764,6 +740,16 @@ c 2604 format (1x,3a6,1x,a6,1x,a6,1x,a6,1x,a6)
 
 c      stop
 
+      inda=0
+      do j=1,natom
+c         if(idummy(j).ne.1)then
+c            inda=inda+1
+            coox(j)=cooxs(j)
+            cooy(j)=cooys(j)
+            cooz(j)=coozs(j)
+c         endif
+      enddo
+
       return
       end
 
@@ -793,7 +779,7 @@ c to B C and D in Z-matrix notation.
 c the adopted approach consists in translating to B the frame and then rotating 
 c so that B C and D are on the xy plane, with C on the y axis
 c A coordinates are immediately deterined in this frame, which is then
-c rototranlated back to the BCD original frame of reference   
+c rototranslated back to the BCD original frame of reference   
 c _rt variables are in the rototranslated reference system
 c _t variables are in the translated ref system 
 c this is similar to the NERF algorithm (see for example 
@@ -801,19 +787,33 @@ c Parsons et al. J.Comp.Chem. 26(10) 1063, 2005.)
 
 c first determines coordinates of ABCD in the RT frame of reference
       
-      ang=ang*3.14159/180.
-      dihed=dihed*3.14159/180.
+c      bc_dist=sqrt((xc-xb)**2+(yc-yb)**2+(zc-zb)**2)
+c      bd_dist=sqrt((xb-xd)**2+(yb-yd)**2+(zb-zd)**2)
+c      cd_dist=sqrt((xc-xd)**2+(yc-yd)**2+(zc-zd)**2)
 
-      bdist=bd*cos(ang)
-      ddist=bd*sin(ang)
+c      write(*,*)'bd ',bd
+c      write(*,*)'ang ',ang
+c      write(*,*)'dihed ',dihed
+c      write(*,*)'bc_dist ',bc_dist
+c      write(*,*)'bd_dist ',bd_dist
+c      write(*,*)'cd_dist ',cd_dist
+c      if(cd_dist.gt.bd_dist)dihed=-dihed
+c      if(dihed.gt.180.)dihed=dihed-360.
+
+      ang1=ang*pigr/180.
+      dihed1=dihed*pigr/180.
+c      write(*,*)'cos dihed ',cos(dihed1)
+
+      bdist=bd*cos(ang1)
+      ddist=bd*sin(ang1)
 
       xb_rt=0.
       yb_rt=0.
       zb_tr=0.
 
-      xa_rt=ddist*cos(dihed)
+      xa_rt=ddist*cos(dihed1)
       ya_rt=bdist
-      za_rt=ddist*sin(dihed)
+      za_rt=ddist*sin(dihed1)
 
 
       bc_dist=sqrt((xc-xb)**2+(yc-yb)**2+(zc-zb)**2)
@@ -826,7 +826,23 @@ c first determines coordinates of ABCD in the RT frame of reference
 
       yd_rt=(bc_dist**2+bd_dist**2-cd_dist**2)/2./bc_dist
       xd_rt=sqrt(bd_dist**2-yd_rt**2)
-      zd_rt=0.
+      zd_rt=0. 
+
+      check1=sqrt((za_rt-zd_rt)**2+(ya_rt-yd_rt)**2+(xa_rt-xd_rt)**2)
+c      write(*,*)'check1 is ',check1
+c      write(*,*)'xa rt = ',xa_rt
+c      write(*,*)'ya rt = ',ya_rt
+c      write(*,*)'za rt = ',za_rt
+c      write(*,*)'xc_rt  = ',xc_rt
+c      write(*,*)'yc_rt  = ',yc_rt
+c      write(*,*)'zc_rt  = ',zc_rt
+c      write(*,*)'xd_rt  = ',xd_rt
+c      write(*,*)'yd_rt  = ',yd_rt
+c      write(*,*)'zd_rt  = ',zd_rt
+c      write(*,*)'xd  = ',xd
+c      write(*,*)'yd  = ',yd
+c      write(*,*)'zd  = ',zd
+      za_rt=-za_rt
 
 cc translate original frame of ref coords so that B is at (0,0,0)
 
@@ -840,11 +856,19 @@ cc translate original frame of ref coords so that B is at (0,0,0)
       yd_t=yd-yb
       zd_t=zd-zb
 
-c      if(yd_t.eq.0)yd_t=0.01
-c      if(xd_t.eq.0)xd_t=0.015
+
+      if(yd_t.eq.0)yd_t=0.00000001
+      if(xd_t.eq.0)xd_t=0.00000001
+      if(xd_rt.eq.0)xd_rt=0.00000001
+
 cc now determine the rotation matrix to rotate back to the original ref system
-      write(*,*)'yc_rt ',yc_rt
-      write(*,*)'xd_rt ',xd_rt
+cc this is based on determinig the position of a (0,0,1) in the orginal frame
+cc and determining the consistent rotation matrix
+
+c      write(*,*)'yc_rt ',yc_rt
+c      write(*,*)'xd_rt ',xd_rt
+c      check1b=sqrt((za_rt-zd_rt)**2+(ya_rt-yd_rt)**2+(xa_rt-xd_rt)**2)
+c      write(*,*)'check1 is ',check1
 
       r12=(xc-xb)/yc_rt
       r22=(yc-yb)/yc_rt
@@ -853,43 +877,134 @@ cc now determine the rotation matrix to rotate back to the original ref system
       r11=(xd-xb-yd_rt*r12)/xd_rt
       r21=(yd-yb-yd_rt*r22)/xd_rt
       r31=(zd-zb-yd_rt*r32)/xd_rt
+c
+      anum_aconst=yc_t-yd_t/xd_t*xc_t
+      den_aconst=zc_t-zd_t/xd_t*xc_t
 
-      aconst=(yc_t-yd_t/xd_t*xc_t)/(zc_t-zd_t/xd_t*xc_t)
+cc this is to avoid overflows for planar systems
+
+      if(abs(anum_aconst).lt.1.0e-6.and.abs(den_aconst).lt.1.0e-6)then
+         if(anum_aconst.lt.0)aconst=-1.0E20
+         if(anum_aconst.gt.0)aconst=1.0E20
+      else if(abs(den_aconst).lt.1.0e-6)then
+         if(anum_aconst.lt.0)aconst=-1.0E20
+         if(anum_aconst.gt.0)aconst=1.0E20
+      else
+         aconst=(yc_t-yd_t/xd_t*xc_t)/(zc_t-zd_t/xd_t*xc_t)
+      endif
+
       den1=(yd_t/xd_t-aconst*zd_t/xd_t)
-      if(den1.lt.1.0e-6)den1=1.0e-6
-
-c      bconst=1./(yd_t/xd_t-aconst*zd_t/xd_t)
+      if(den1.eq.0.)den1=1.0e-20
       bconst=1./den1
-c      bconst=999999.
-      xe_t=-1/sqrt(1+(bconst**2)*(1+aconst**2))
+
+      dvect=1.0
+
+      xe_t=-(dvect)/sqrt(1+(bconst**2)*(1+aconst**2))
       ye_t=-xe_t*bconst
       ze_t=-ye_t*aconst
 
+c      write(*,*)'num_aconst ',anum_aconst
+c      write(*,*)'den_aconst ',den_aconst
+c      write(*,*)'bconst ',bconst
+
+c      write(*,*)'xc_t ',(xc_t)
+c      write(*,*)'xd_t ',(xd_t)
+c      write(*,*)'yc_t ',(yc_t)
+c      write(*,*)'yd_t ',(yd_t)
+c      write(*,*)'zc_t ',(zc_t)
+c      write(*,*)'zd_t ',(zd_t)
 c      write(*,*)'den ',(yd_t/xd_t-aconst*zd_t/xd_t)
 c      write(*,*)'den1 ',(yd_t/xd_t)
 c      write(*,*)'den2 ',(aconst*zd_t/xd_t)
 c      write(*,*)'den21 ',(aconst)
 c      write(*,*)'den22 ',(zd_t/xd_t)
-
-c      write(*,*)'aconst ',aconst
-c      write(*,*)'bconst ',bconst
 c      write(*,*)'xd ',xd_t
 c      write(*,*)'yd ',yd_t
 c      write(*,*)'zd ',zd_t
 
-      r13=xe_t
-      r23=ye_t
-      r33=ze_t
+      r13=xe_t/dvect
+      r23=ye_t/dvect
+      r33=ze_t/dvect
 
-      xe_rt=0.
-      ye_rt=0.
-      ze_rt=1.
+      r13n=-xe_t/dvect
+      r23n=-ye_t/dvect
+      r33n=-ze_t/dvect
+
+c      xe_rt=0.
+c      ye_rt=0.
+c      ze_rt=1.
 
 cc now rotate and translate back
 
-      xa=xb+r11*xa_rt+r12*ya_rt+r13*za_rt
-      ya=yb+r21*xa_rt+r22*ya_rt+r23*za_rt
-      za=zb+r31*xa_rt+r32*ya_rt+r33*za_rt
+cc here I check  the (001) vector direction to decide whether to take the positive of negative results of the 
+cc square root taken above
+c      write(*,*)'r12 is ',r12
+c      write(*,*)'r22 is ',r22
+c      write(*,*)'r32 is ',r32
+c      write(*,*)'r13 is ',r13
+c      write(*,*)'r23 is ',r23
+c      write(*,*)'r33 is ',r33
+
+      xap=xb+r11*xa_rt+r12*ya_rt+r13*za_rt
+      yap=yb+r21*xa_rt+r22*ya_rt+r23*za_rt
+      zap=zb+r31*xa_rt+r32*ya_rt+r33*za_rt
+
+      xan=xb+r11*xa_rt+r12*ya_rt+r13n*za_rt
+      yan=yb+r21*xa_rt+r22*ya_rt+r23n*za_rt
+      zan=zb+r31*xa_rt+r32*ya_rt+r33n*za_rt
+
+      b1v=xb-xc
+      b2v=yb-yc
+      b3v=zb-zc
+      c1v=xc-xd
+      c2v=yc-yd
+      c3v=zc-zd
+      vec1=b2v*c3v-b3v*c2v
+      vec1c=xe_t
+      vec2=b3v*c1v-b1v*c3v
+      vec2c=ye_t
+      vec3=b1v*c2v-b2v*c1v
+      vec3c=ze_t
+
+      if(abs(vec1c).gt.1.0e-5)then
+         checkv=vec1/vec1c
+      else if(abs(vec2c).gt.1.0e-5)then
+         checkv=vec2/vec2c
+      else
+         checkv=vec3/vec3c
+      endif
+cc check
+cc      if(checkv.lt.0)then
+      if(checkv.gt.0)then
+         xa=xap
+         ya=yap
+         za=zap
+cc      else if (checkv.gt.0)then
+      else if (checkv.lt.0)then
+         xa=xan
+         ya=yan
+         za=zan
+      else
+         xa=xap
+         ya=yap
+         za=zap
+      endif
+
+      check2=sqrt((za-zd)**2+(ya-yd)**2+(xa-xd)**2)
+      check3=sqrt((za-zd)**2+(ya-yd)**2+(xa-xd)**2)
+      check2n=sqrt((zan-zd)**2+(yan-yd)**2+(xan-xd)**2)
+c      write(*,*)'vec1 is ',vec1
+c      write(*,*)'vec1c is ',vec1c
+c      write(*,*)'vec2c is ',vec2c
+c      write(*,*)'vec2 is ',vec2
+c      write(*,*)'checkv is ',checkv
+
+
+c      write(*,*)'check2 is ',check2
+c      write(*,*)'check2n is ',check2n
+c      write(*,*)'xan,p is ',xan,xap
+c      write(*,*)'yan,p is ',yan,yap
+c      write(*,*)'zan,p is ',zan,zap
 
       return
       end
@@ -934,8 +1049,8 @@ c         stop
 cc first rotate around z
          ialfajump=0
          dist=sqrt(cooxt(2)*cooxt(2)+cooyt(2)*cooyt(2))
-         if(dist.gt.1.0e-2) then
-            alfa=acos((cooxt(2))/dist)
+         if(dist.gt.1.0e-10) then
+            alfa=dacos((cooxt(2))/dist)
          else
             alfa=0.
             ialfajump=1
@@ -948,11 +1063,11 @@ c            if(alfa.gt.0)alfa=3.1415*2-alfa
 c            if(alfa.lt.0)alfa=3.1415-alfa
 c         endif
 
-         write(*,*)'dist is = ',dist
-         write(*,*)'alfa is = ',alfa
+c         write(*,*)'dist is = ',dist
+c         write(*,*)'alfa is = ',alfa
 
          if(cooyt(2).gt.0)then
-            alfa=3.14159*2-alfa
+            alfa=pigr*2-alfa
 c            if(cooxt(2).gt.0)alfa=3.1415-alfa+3.1415
 c            if(cooxt(2).lt.0)alfa=3.1415-alfa+3.1415
 c            if(alfa.lt.0)alfa=3.1415-abs(alfa)
@@ -964,8 +1079,8 @@ c         write(*,*)'alfa z = ',alfa
 c      write(*,*)'alfa y = ',asin(sinpar)
          if(ialfajump.eq.0)then
             do j=1,natom
-               cooxt1(j)=cooxt(j)*cos(alfa)-cooyt(j)*sin(alfa)
-               cooyt1(j)=cooxt(j)*sin(alfa)+cooyt(j)*cos(alfa)
+               cooxt1(j)=cooxt(j)*dcos(alfa)-cooyt(j)*dsin(alfa)
+               cooyt1(j)=cooxt(j)*dsin(alfa)+cooyt(j)*dcos(alfa)
                coozt1(j)=coozt(j)
             enddo
          else
@@ -975,40 +1090,42 @@ c      write(*,*)'alfa y = ',asin(sinpar)
                coozt1(j)=coozt(j)
             enddo
          endif
-         do j=1,natom
-            write(*,*)'coox1 ',cooxt1(j)
-            write(*,*)'cooy1 ',cooyt1(j)
-            write(*,*)'cooz1 ',coozt1(j)
-         enddo
+c         do j=1,natom
+c            write(*,*)'coox1rt ',cooxt1(j)
+c            write(*,*)'cooy1rt ',cooyt1(j)
+c            write(*,*)'cooz1rt ',coozt1(j)
+c         enddo
 
 
 cc now rotate around y
          ialfajump=0
          dist=sqrt(cooxt1(2)*cooxt1(2)+coozt1(2)*coozt1(2))
-         if(dist.gt.1.0e-2) then
-            alfa=acos((cooxt1(2))/dist)
+         if(dist.gt.1.0e-10) then
+            alfa=dacos((cooxt1(2))/dist)
          else
             ialfajump=1
             alfa=0
          endif
-      write(*,*)'alfa y = ',alfa
-      write(*,*)'ialfa y = ',ialfajump
+c      write(*,*)'alfa y = ',alfa
+c      write(*,*)'dist = ',dist
+c      write(*,*)'alfajump = ',alfajump
+c      write(*,*)'ialfa y = ',ialfajump
 c      do j=1,natom
 c         write(*,*)cooxt1(j),cooyt1(j),coozt1(j)
 c      enddo
 
          if(coozt1(2).lt.0)then
-            alfa=3.14159*2-alfa
+            alfa=pigr*2.-alfa
 c            if(cooxt(2).gt.0)alfa=3.1415-alfa+3.1415
 c            if(cooxt(2).lt.0)alfa=3.1415-alfa+3.1415
 c            if(alfa.lt.0)alfa=3.1415-abs(alfa)
          endif
 
-         if(alfajump.eq.0)then
+         if(ialfajump.eq.0)then
             do j=1,natom
-               coox(j)=cooxt1(j)*cos(alfa)+coozt1(j)*sin(alfa)
+               coox(j)=cooxt1(j)*dcos(alfa)+coozt1(j)*dsin(alfa)
                cooy(j)=cooyt1(j)
-               cooz(j)=-cooxt1(j)*sin(alfa)+coozt1(j)*cos(alfa)
+               cooz(j)=-cooxt1(j)*dsin(alfa)+coozt1(j)*dcos(alfa)
             enddo
          else
             do j=1,natom
@@ -1017,11 +1134,11 @@ c            if(alfa.lt.0)alfa=3.1415-abs(alfa)
                cooz(j)=coozt1(j)
             enddo
          endif
-         do j=1,natom
-            write(*,*)'coox2 ',coox(j)
-            write(*,*)'cooy2 ',cooy(j)
-            write(*,*)'cooz2 ',cooz(j)
-         enddo
+c         do j=1,natom
+c            write(*,*)'coox2 ',coox(j)
+c            write(*,*)'cooy2 ',cooy(j)
+c            write(*,*)'cooz2 ',cooz(j)
+c         enddo
 
 
 c      do j=1,natom
@@ -1075,8 +1192,6 @@ c************************************************************
 cc returns coordinates xa ya za for an atom defined with respect to
 cc three atoms whose coordinates are known and from which the distances 
 cc are known
-cc usee Newton Raphson to solve non linear 3 eq 3 unkown problem
-cc using analytic Jacobian
 
       implicit double precision (a-h,o-z)
 
@@ -1090,43 +1205,99 @@ c
 
       include 'filcomm.f'
 
-cc assume guess at 0.
-      
-c            if(ibconn(j).eq.1)then
-c               cooxt(j)=0.
-c               cooyt(j)=0.
-c               coozt(j)=bd
-c            else
-c               cooxt(j)=cooxt(2)
-c               cooyt(j)=0.
-c               coozt(j)=bd
+cc first check if reference atoms are co-linear:
 
-      write(*,*)'x1 is ',x1
-      write(*,*)'y1 is ',y1
-      write(*,*)'z1 is ',z1
-      write(*,*)'x2 is ',x2
-      write(*,*)'y2 is ',y2
-      write(*,*)'z2 is ',z2
-      write(*,*)'x3 is ',x3
-      write(*,*)'y3 is ',y3
-      write(*,*)'z3 is ',z3
-      write(*,*)'da2 is ',da2
-      write(*,*)'db2 is ',db2
-      write(*,*)'dc2 is ',dc2
+      distcheck1=sqrt((x3-x2)**2+(y3-y2)**2+(z3-z2)**2)
+      ref1=sqrt(abs(dc2-da2))+sqrt(abs(db2-da2))
+c         write(*,*)'dist1',distcheck1
+c         write(*,*)'dist2',ref1
+      if(abs(distcheck1-ref1).lt.0.001)then
+cc if system colinear place x on z plane
+c         write(*,*)'3-1-2 colinear atoms'
+cc translate ref system
+         xt1=0.
+         yt1=0.
+         zt1=0.
+         xt2=x2-x1
+         yt2=y2-y1
+         zt2=z2-z1
+         xt3=x3-x1
+         yt3=y3-y1
+         zt3=z3-z1
+         if(yt2.ne.0)then
+            alfa=-xt2/yt2
+            beta=(db2-da2-xt2*xt2-yt2*yt2-zt2*zt2)/2/yt2
+            xa=-alfa*beta/(1+alfa*alfa)+sqrt((alfa*beta/
+     +            (1+alfa*alfa))**2-
+     +           (beta*beta-da2)/(1+alfa*alfa))
+            ya=alfa*xa-beta
+            za=0.
+         else
+            xa=-(db2-da2-xt2*xt2-yt2*yt2-zt2*zt2)/2./xt2
+            ya=sqrt(abs(da2-xa*xa))
+            za=0.
+         endif
+         xa=xa+x1
+         ya=ya+y1
+         za=za+z1
+      else
+         if(x2.eq.0.and.y2.eq.0.and.z2.eq.0)then
+            xt1=0.
+            yt1=0.
+            zt1=0.
+            xt2=x2-x1
+            yt2=y2-y1
+            zt2=z2-z1
+            xt3=x3-x1
+            yt3=y3-y1
+            zt3=z3-z1
+         else if(x1.eq.0.and.y1.eq.0.and.z1.eq.0)then
+            xt1=x1
+            yt1=y1
+            zt1=z1
+            xt2=x2
+            yt2=y2
+            zt2=z2
+            xt3=x3
+            yt3=y3
+            zt3=z3
+         else
+            write(*,*)'this algorithm is not going to work'
+            write(*,*)'this is gping to need some debugging'
+            stop
+         endif
+         xa=(da2-db2+xt2*xt2)/2/xt2
+         if(yt3.ne.0.and.zt3.ne.0)then
+            Ac=-zt3/yt3
+            Bc=-(dc2-da2+2*xa*xt3-xt3*xt3-yt3*yt3-zt3*zt3)/2/yt3
+            za=(-Ac*Bc+sqrt(abs(Ac*Ac*Bc*Bc-(1+Ac*Ac)*
+     +           (xta*xta-da2+Bc*Bc))))/(1+Ac*Ac)
+            ya=Ac*za+Bc
+         else if (yt3.ne.0.and.zt3.eq.0)then
+            ya=-(dc2-da2+2*xa*xt3-xt3*xt3-yt3*yt3-zt3*zt3)/2/yt3
+            za=sqrt(abs(da2-xa*xa-ya*ya))
+         else
+            za=-(dc2-da2+2*xa*xt3-xt3*xt3-yt3*yt3-zt3*zt3)/2/zt3
+            ya=sqrt(abs(da2-xa*xa-za*za))
+         endif
+         if(x2.eq.0.and.y2.eq.0.and.z2.eq.0)then
+            xa=xa+x1
+            ya=ya+y1
+            za=za+z1
+         endif
 
-c      stop
+c         xa=(da2-db2+x2*x2)/2/x2
+c         Ac=-z3/y3
+c         Bc=-(dc2-da2+2*xa*x3-x3*x3-y3*y3-z3*z3)/2/y3
+c         za=(-Ac*Bc+sqrt(abs(Ac*Ac*Bc*Bc-(1+Ac*Ac)*(xa*xa-da2+Bc*Bc))))
+c     +        /(1+Ac*Ac)
+c         ya=Ac*za+Bc
+      endif
 
-      xa=(da2-db2+x2*x2)/2/x2
-      Ac=-z3/y3
-      Bc=-(dc2-da2+2*xa*x3-x3*x3-y3*y3-z3*z3)/2/y3
-      za=(-Ac*Bc+sqrt(abs(Ac*Ac*Bc*Bc-(1+Ac*Ac)*(xa*xa-da2+Bc*Bc))))
-     +   /(1+Ac*Ac)
-      ya=Ac*za+Bc
-
-      write(*,*)'xa is ',xa
-      write(*,*)'ya is ',ya
-      write(*,*)'za is ',za
-      write(*,*)'sqrt is ',Ac*Ac*Bc*Bc-(1+Ac*Ac)*(xa*xa-da2+Bc*Bc)
+c      write(*,*)'xa is ',xa
+c      write(*,*)'ya is ',ya
+c      write(*,*)'za is ',za
+c      write(*,*)'sqrt is ',Ac*Ac*Bc*Bc-(1+Ac*Ac)*(xa*xa-da2+Bc*Bc)
 
 c      xa=0.
 c      ya=0.
@@ -1174,9 +1345,9 @@ c         za=za+delta3
 c         error_tot=abs(d1)+abs(d2)+abs(d3)
 c         if (error_tot.lt.1.0e-10) goto 100
          
-c         write(*,*)'xa is',xa
-c         write(*,*)'ya is',ya
-c         write(*,*)'za is',za
+         write(*,*)'xa is',xa
+         write(*,*)'ya is',ya
+         write(*,*)'za is',za
 c         write(*,*)' error 1 is ',d1
 c         write(*,*)' error 2 is ',d2
 c         write(*,*)' error 2 is ',d3
@@ -1210,8 +1381,8 @@ c
      $ ,title,title1,word4,word5,word6,word7
 
       include 'filcomm.f'
-      pi=3.14159265359
-      alfa=pi*alfa/180.
+c      pi=3.14159265359
+      alfa=pigr*alfa/180.
 
       da1=db*cos(pi-alfa)
       db1=db*sin(pi-alfa)
@@ -1236,17 +1407,123 @@ c
      $ ,title,title1,word4,word5,word6,word7
 
       include 'filcomm.f'
-      write(*,*)'da is',da
-      write(*,*)'db is',db
-      write(*,*)'dc is',dc
-      pi=3.14159265359
+c      write(*,*)'da is',da
+c      write(*,*)'db is',db
+c      write(*,*)'dc is',dc
+c      pi=3.14159265359
       beta=acos((dc*dc-da*da-db*db)/2/da/db)
 c     write(*,*)'acos is ',(dc*dc-da*da-db*db)/2/da/db
 c     write(*,*)'beta is ',beta
 c      stop
-      alfa=(pi-beta)*180./pi
+      alfa=(pigr-beta)*180./pigr
 
       return
       end
 c************************************************************
+      subroutine xyz_to_zmat(xa,ya,za,xb,yb,zb,xc,yc,zc,
+     $ xd,yd,zd,ang,dihed)
 
+      implicit double precision (a-h,o-z)
+
+      include 'data_estoktp.fi'
+      include 'param_estoktp.fi'
+c     
+      dimension a_b(3),b_c(3),c_d(3)
+      dimension vn1(3),vn2(3),vm(3)
+
+
+      LOGICAL leof,lsec,ltit
+
+      CHARACTER*160 line,sename,string,word,word2,word3
+     $ ,title,title1,word4,word5,word6,word7
+
+      include 'filcomm.f'
+
+      xbt=xb-xa
+      ybt=yb-ya
+      zbt=zb-za
+      xct=xc-xa
+      yct=yc-ya
+      zct=zc-za
+      xdt=xd-xa
+      ydt=yd-ya
+      zdt=zd-za
+      xat=0.
+      yat=0.
+      zat=0.
+
+      a_b(1)=xat-xbt
+      a_b(2)=yat-ybt
+      a_b(3)=zat-zbt
+
+      b_c(1)=xbt-xct
+      b_c(2)=ybt-yct
+      b_c(3)=zbt-zct
+
+      c_d(1)=xct-xdt
+      c_d(2)=yct-ydt
+      c_d(3)=zct-zdt
+
+      axb=a_b(1)*b_c(1)+a_b(2)*b_c(2)+a_b(3)*b_c(3)
+      anorm=sqrt(a_b(1)*a_b(1)+a_b(2)*a_b(2)+a_b(3)*a_b(3))
+      bnorm=sqrt(b_c(1)*b_c(1)+b_c(2)*b_c(2)+b_c(3)*b_c(3))
+      cnorm=sqrt(c_d(1)*c_d(1)+c_d(2)*c_d(2)+c_d(3)*c_d(3))
+
+c      write(*,*)'xa ya za ',xat,yat,zat
+c      write(*,*)'xb yb zb ',xbt,ybt,zbt
+c      write(*,*)'xc yc zc ',xct,yct,zct
+c      write(*,*)'xd yd zd ',xdt,ydt,zdt
+c      write(*,*)'anorm is ',anorm
+c      write(*,*)'bnorm is ',bnorm
+c      write(*,*)'cnorm is ',cnorm
+c      write(*,*)'axb is ',axb
+c      write(*,*)'acos is ',acos(axb/anorm/bnorm)
+
+      ang=180./pigr*(pigr-acos(axb/anorm/bnorm))
+
+c      write(*,*)'ang is ',ang
+
+      a_b(1)=a_b(1)/anorm
+      a_b(2)=a_b(2)/anorm
+      a_b(3)=a_b(3)/anorm
+
+      b_c(1)=b_c(1)/bnorm
+      b_c(2)=b_c(2)/bnorm
+      b_c(3)=b_c(3)/bnorm
+
+      c_d(1)=c_d(1)/cnorm
+      c_d(2)=c_d(2)/cnorm
+      c_d(3)=c_d(3)/cnorm
+
+      vn1(1)= a_b(2)*b_c(3)-a_b(3)*b_c(2)
+      vn1(2)=-a_b(1)*b_c(3)+a_b(3)*b_c(1)
+      vn1(3)= a_b(1)*b_c(2)-a_b(2)*b_c(1)
+
+      vn2(1)= b_c(2)*c_d(3)-b_c(3)*c_d(2)
+      vn2(2)=-b_c(1)*c_d(3)+b_c(3)*c_d(1)
+      vn2(3)= b_c(1)*c_d(2)-b_c(2)*c_d(1)
+
+      vm(1)=  b_c(2)*vn1(3)-b_c(3)*vn1(2)
+      vm(2)= -b_c(1)*vn1(3)+b_c(3)*vn1(1)
+      vm(3)=  b_c(1)*vn1(2)-b_c(2)*vn1(1)
+
+      vx=vn1(1)*vn2(1)+vn1(2)*vn2(2)+vn1(3)*vn2(3)
+      vy=vm(1)*vn2(1)+vm(2)*vn2(2)+vm(3)*vn2(3)
+
+c      write(*,*)'atan is ',atan2(vy,vx)
+c      write(*,*)'acos1 is ',acos(vx)
+c      write(*,*)'acos2 is ',acos(vy)
+c      stop
+
+      dihed=-atan2(vy,vx)*180./pigr
+      dihed2=acos(vx)*180./pigr
+c      dihed=atan2(vx,vy)*180./pigr
+
+c      write(*,*)'ang is ',ang
+c      write(*,*)'dihed is ',dihed
+c      write(*,*)'dihed 2 is',dihed2
+
+c      stop
+
+      return
+      end

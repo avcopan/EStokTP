@@ -8,7 +8,7 @@
       DATA SMALL,DLARGE /1.0D-30,1.0D30/
       data uconv,pconv /6.12617d-09,2.206599514e11/
       DATA CAUTOKCAL,CKCALTOWN /627.509469,349.75509/
-
+      DATA pigr /3.141592653589793/
 c
 c     uconv = cautocm**3/cautos
 c     pconv = cautoerg/(1333.32*cautocm**3)

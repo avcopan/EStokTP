@@ -68,6 +68,8 @@ c initialize word, word2, word3, word4, word5
       iqc=0
       icsy=0
       ilin_fr=0
+      ifilu=0
+      if(natom.eq.2)ilin=0
       if(ilin.eq.1) ilin_fr=1
  999  continue
 
@@ -134,7 +136,7 @@ c
          read (99,'(A70)') comline2
          close(99)
       else if (ired.eq.2)then
-         write(*,*)'pass from here'
+cc         write(*,*)'pass from here'
          call read_zmat(atomlabel,natom,natomt,intcoor,bislab,ibconn,
      $ iaconn,idconn,bname,anname,dname,atname,idummy,isited,jsited,
      $ ksited,bconnt,aconnt,dconnt)
@@ -821,7 +823,7 @@ c            read(99,*)cjunk,cjunk,iqclab
 c         if(ired.eq.1)then
             call update_zmat(natom,natomt,intcoor,bislab,ibconn,iaconn
      $    ,idconn,bname,anname,dname,atname,coox,cooy,cooz,xint,tauopt,
-     $           ntau,idummy,ilin_fr,aconnt,bconnt,dconnt,atomlabel)
+     $       ntau,idummy,ilin_fr,aconnt,bconnt,dconnt,atomlabel,ifilu)
             if(xint(1).eq.0)then
                write(*,*)'failed in updating geometry'
                write(*,*)'probably error of g09, check output'
@@ -838,7 +840,7 @@ cc      if(ichecken.eq.0.and.gkeyword.ne.'level1')then
       if(ired.eq.1)then
          call update_zmat(natom,natomt,intcoor,bislab,ibconn,iaconn
      $ ,idconn,bname,anname,dname,atname,coox,cooy,cooz,xint,tauopt,
-     $  ntau,idummy,ilin_fr,aconnt,bconnt,dconnt,atomlabel)
+     $  ntau,idummy,ilin_fr,aconnt,bconnt,dconnt,atomlabel,ifilu)
          if(xint(1).eq.0)then
             write(*,*)'failed in updating geometry'
             write(*,*)'probably error of g09, check output'

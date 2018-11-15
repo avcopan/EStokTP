@@ -12,7 +12,7 @@ c
       common /tsdat/ aabs1,babs1,aabs2,babs2,babs3,rts
       common /itsdat/ iabs,iadd,iiso,ibeta,ifrozrts,isite,jsite
      $ ,ksite,ireact,irecov,iprojrcoo
-      common /ircdat/ ivar,iresirc,imdtunn,inotunn
+      common /ircdat/ ivar,iresirc,imdtunn,inotunn,intfreq
       common /irtype/ irw,ipw,nts,ip1,ip2,ipr1
 c      common /strucword/ stoich
       common /igeom/ frozcoo,igeom_wellp,igeom_wellr

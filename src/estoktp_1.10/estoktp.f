@@ -105,6 +105,14 @@ c initializations
       iopt_wellr_1=0
       iopt_wellp_1=0
       iopt_ts_1=0
+      ibmat_reac1=0
+      ibmat_reac2=0
+      ibmat_prod1=0
+      ibmat_prod2=0
+      ibmat_wellr=0
+      ibmat_wellp=0
+      ibmat_ts=0
+      ibmat_test=0
       i1dtau_reac1=0
       i1dtau_reac2=0
       i1dtau_prod1=0
@@ -155,6 +163,7 @@ c initializations
       ifrozrts = 0
       irecov = 0
       itotcalc=0
+      intfreq=0
 
       open (unit=5,file='./data/estoktp.dat',status='UNKNOWN')
       open (unit=6,file='./output/estoktp.out',status='UNKNOWN')
@@ -174,6 +183,7 @@ c initializations
       endif
       if (WORD.EQ.'VARIATIONAL') then
          ivar = 1
+         if(WORD2.EQ.'INTERNAL')intfreq=1
       endif
       if (WORD.EQ.'RESIRC') then
          iresirc = 1
@@ -197,6 +207,7 @@ c         stop
       if (WORD.EQ.'MDTUNNEL') then
          imdtunn = 1
          iprojrcoo = 0
+         if(WORD2.EQ.'INTERNAL')intfreq=1
       endif
       if (WORD.EQ.'PROJRCOO') then
          iprojrcoo = 0
@@ -310,7 +321,38 @@ c      endif
          iopt_ts_1=1
          itotcalc=itotcalc+1
       endif
-
+      if (WORD.EQ.'BMAT_REAC1') then
+         ibmat_reac1=1
+         itotcalc=itotcalc+1
+      endif
+      if (WORD.EQ.'BMAT_REAC2') then
+         ibmat_reac2=1
+         itotcalc=itotcalc+1
+      endif
+      if (WORD.EQ.'BMAT_PROD1') then
+         ibmat_prod1=1
+         itotcalc=itotcalc+1
+      endif
+      if (WORD.EQ.'BMAT_PROD2') then
+         ibmat_prod2=1
+         itotcalc=itotcalc+1
+      endif
+      if (WORD.EQ.'BMAT_WELLR') then
+         ibmat_wellr=1
+         itotcalc=itotcalc+1
+      endif
+      if (WORD.EQ.'BMAT_WELLP') then
+         ibmat_wellp=1
+         itotcalc=itotcalc+1
+      endif
+      if (WORD.EQ.'BMAT_TS') then
+         ibmat_ts=1
+         itotcalc=itotcalc+1
+      endif
+      if (WORD.EQ.'BMAT_TEST') then
+         ibmat_test=1
+         itotcalc=itotcalc+1
+      endif
       if (WORD.EQ.'1DTAU_REAC1') then
          i1dtau_reac1=1
          itotcalc=itotcalc+1
@@ -582,6 +624,49 @@ c reoptimize at higher level
          ispecies=6
          if(igeom_wellp.eq.2.or.igeom_wellp.eq.1) ispecies=61
          call level1(ispecies)
+      endif
+
+c determine B matrix for slected species
+      if (ibmat_reac1.eq.1) then
+         if (idebug.ge.1) write (6,*) 'computing reac1 bmat'
+         ispecies=1
+         call bmatrix(ispecies,0)
+      endif
+      if (ibmat_reac2.eq.1) then
+         if (idebug.ge.1) write (6,*) 'comuting reac2 bmat'
+         ispecies=2
+         call bmatrix(ispecies,0)
+      endif
+      if (ibmat_prod1.eq.1) then
+         if (idebug.ge.1) write (6,*) 'computing prod1 bmat'
+         ispecies=3
+         call bmatrix(ispecies,0)
+      endif
+      if (ibmat_prod2.eq.1) then
+         if (idebug.ge.1) write (6,*) 'computing prod2 bmat'
+         ispecies=4
+         call bmatrix(ispecies,0)
+      endif
+      if (ibmat_ts.eq.1) then
+         if (idebug.ge.1) write (6,*) 'computing ts bmat'
+         ispecies=0
+         call bmatrix(ispecies,0)
+      endif
+      if (ibmat_wellr.eq.1) then
+         if (idebug.ge.1) write (6,*) 'computing wellr bmat'
+         ispecies=5
+         if(igeom_wellr.eq.2.or.igeom_wellr.eq.1) ispecies=51
+         call bmatrix(ispecies,0)
+      endif
+      if (ibmat_wellp.eq.1) then
+         if (idebug.ge.1) write (6,*) 'computing wellp bmat'
+         ispecies=6
+         if(igeom_wellp.eq.2.or.igeom_wellp.eq.1) ispecies=61
+         call bmatrix(ispecies,0)
+      endif
+      if (ibmat_test.eq.1) then
+         if (idebug.ge.1) write (6,*) 'computing test bmat'
+         call bmatrix(0,1)
       endif
 
 c determine 1-dimensional torsional potentials
@@ -4062,7 +4147,7 @@ cc first determine how many structures were determined with the rotational scan
          open (unit=99,file='num.log',status='unknown')
          read (99,*) numstruct
          close (unit=99,status='keep')
-         numstruct=numstruct-1
+c         numstruct=numstruct-1
          write(*,*)'num struct to choose from is: ',numstruct
 
 cc now open the xyz files and get the energies
@@ -4133,10 +4218,13 @@ c      stop
 
 
 c for the optimum geometry print out the optimized coordinates
-      noptg=numstruct
+      if(irecov.eq.1)noptg=numstruct
       ioptmin = 1
       voptmin= vref(ioptmin)
 c     write (16,*) 'opt test',noptg,voptmin,ioptmin
+      write (56,*) 'rtscheck ',rtscheck
+      write (56,*) 'numstruct ',noptg
+      write (56,*) rtscheck
       do iopt = 1 , noptg
          if(rtscheck.ne.0)then
             if (vref(iopt).lt.voptmin) then
@@ -4608,11 +4696,72 @@ cc first read blocks that are common for input type 1 and 2
          endif
       enddo
       read (15,*) nelec
-      write (66,*) 'test4',nelec
+c      write (66,*) 'test4',nelec
       do ielec = 1 , nelec
          read (15,*) eelec(ielec),gelec(ielec)
       enddo
       rewind(15)
+
+cc read scaling factor for frequencies.
+
+      sclfr=1.0
+      iscl=0
+      rewind(21)
+      call LineRead (0)
+      do while (WORD.NE.'END')
+         call LineRead (21)
+         if (WORD.EQ.'SCALEFREQ'.and.iscl.eq.0) then
+            read(21,*)sclfr
+         endif
+         if (WORD.EQ.'SCALEFREQ_TS'.and.iscl.eq.0.and.
+     +        ispecies.eq.0) then
+            read(21,*)sclfr
+            iscl=1
+         endif
+         if (WORD.EQ.'SCALEFREQ_REAC1'.and.iscl.eq.0.and.
+     +        ispecies.eq.1) then
+            read(21,*)sclfr
+            iscl=1
+         endif
+         if (WORD.EQ.'SCALEFREQ_REAC2'.and.iscl.eq.0.and.
+     +        ispecies.eq.2) then
+            read(21,*)sclfr
+            iscl=1
+         endif
+         if (WORD.EQ.'SCALEFREQ_PROD1'.and.iscl.eq.0.and.
+     +        ispecies.eq.3) then
+            read(21,*)sclfr
+            iscl=1
+         endif
+         if (WORD.EQ.'SCALEFREQ_PROD2'.and.iscl.eq.0.and.
+     +        ispecies.eq.4) then
+            read(21,*)sclfr
+            iscl=1
+         endif
+         if (WORD.EQ.'SCALEFREQ_WELLR'.and.iscl.eq.0.and.
+     +        ispecies.eq.5) then
+            read(21,*)sclfr
+            iscl=1
+         endif
+         if (WORD.EQ.'SCALEFREQ_WELLP'.and.iscl.eq.0.and.
+     +        ispecies.eq.6) then
+            read(21,*)sclfr
+            iscl=1
+         endif
+         if (WORD.EQ.'SCALEFREQ_WELLR'.and.iscl.eq.0.and.
+     +        ispecies.eq.51) then
+            read(21,*)sclfr
+            iscl=1
+         endif
+         if (WORD.EQ.'SCALEFREQ_WELLP'.and.iscl.eq.0.and.
+     +        ispecies.eq.61) then
+            read(21,*)sclfr
+            iscl=1
+         endif
+      enddo
+      rewind(21)
+c      write(*,*)'ok cc1'
+c      stop
 
 cc read specific input for input type 1
 
@@ -4810,6 +4959,7 @@ cc here we assume that the TS is not linear
          ilin2=0
 
 cc now read input of type 2
+
          do while (WORD.NE.'CHARGE')
             call LineRead (15)
             if (WORD.EQ.'END') then
@@ -4820,6 +4970,8 @@ cc now read input of type 2
          read (15,*) icharge,ispin
          rewind(15)
 
+c      write(*,*)'ok cc1'
+c      stop
          if(ispecies.eq.0) then
             do while (WORD.NE.'LEVEL1_TS')
                call LineRead (21)
@@ -5631,7 +5783,7 @@ c         call commrun(command1)
          do j = 1, nfreq
             if (freq(j).gt.0.) then 
                jt = jt + 1
-               freqp(jt) = freq(j)
+               freqp(jt) = freq(j)*sclfr
             endif
          enddo
 
@@ -11448,6 +11600,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       dimension rc_ene_kcal(nircmx)
       dimension rc_ene_hl(nircmx)
       dimension freqproj(3*natommx,nircmx)
+      dimension freqintproj(3*natommx,nircmx)
       dimension freqRTproj(3*natommx,nircmx)
       dimension rotpot(noptmx)
       dimension gelec(nelecmx),eelec(nelecmx)
@@ -11473,6 +11626,7 @@ c      character*70 comline3,comline4
 cc dimension of this matrix should be double checked
       character*100 force_con(3*natommx*3*natommx/10,nircmx)
       character*100 grad(natommx,nircmx)
+      character*100 gradts(natommx)
 cc      character*20 rc_coord(nircmx)
       character*20 step(nircmx)
       character*20 filename
@@ -11480,6 +11634,7 @@ cc      character*20 rc_coord(nircmx)
       character*30 gmem
       character*20 bname(natommx),anname(natommx),dname(natommx)
      $ ,atname(natommx),bconnt(natommx),aconnt(natommx),dconnt(natommx)
+
 
       LOGICAL leof,lsec,ltit
       CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
@@ -11598,7 +11753,7 @@ c     natomt is to account for dummy atoms
       read (15,*) nhind
       rewind 15
 
-c determine number of reacting number for beta-scission reactions
+c determine number of reacting atom for beta-scission reactions
       if(ibeta.eq.1)then
          do while (WORD.NE.'RMAX1')
             call LineRead (15)
@@ -11754,7 +11909,7 @@ cc now perform IRC scan
       ifreq=0 
       ixyz=0
       ired=0
-      ires=1
+      ires=0
 
       if(ilev0code.eq.1) then
          write (16,*) 'starting g09pot'
@@ -11899,6 +12054,14 @@ c      enddo
  1333 format (I3,1X,F8.5,1X,F10.7,1X,F8.5,1X,F8.5)
  1032 format (A120)
 
+cc
+cc set to 0 the gradient at the saddle point
+
+      do j=1,natom
+         gradts(j)=grad(j,numpointsf+1)
+         grad(j,numpointsf+1)=' 1 1 0. 0. 0.'
+      enddo
+
 
 cc at this point, all vectors are filled in 
 cc now we can compute the projected frequencies
@@ -11925,7 +12088,11 @@ cc write input for multidimensional tunneling calculations
       write(333,*)'Maxtdev:                    0.5'
       write(333,*)'Rearrange(1=yes,0=no)       1'
       write(333,*)'SaddlePoint                ',numpointsf
-      write(333,*)'ds(1=noexp,0=standard)      0'
+         if(intfreq.eq.0)then
+            write(333,*)'internalcoord(1=yes)     0'
+         else if (intfreq.eq.1)then
+            write(333,*)'internalcoord(1=yes)     1'            
+         endif
       write(333,*)'isct_vtst(1=vtst_sct,0=sct) 1'
       write(333,*)'zerocurvature(1)            0'
       write(333,*)'reduced_mass                1.0'
@@ -11955,7 +12122,11 @@ c     +         status='unknown')
          write(133,*)'Maxtdev:                    0.5'
          write(133,*)'Rearrange(1=yes,0=no)       1'
          write(133,*)'SaddlePoint                 1'
-         write(133,*)'ds(1=noexp,0=standard)      0'
+         if(intfreq.eq.0)then
+            write(133,*)'internalcoord(1=yes)     0'
+         else if (intfreq.eq.1)then
+            write(133,*)'internalcoord(1=yes)     1'            
+         endif
          write(133,*)'isct_vtst(1=vtst_sct,0=sct) 1'
          write(133,*)'zerocurvature(1)            0'
          write(133,*)'reduced_mass                1.0'
@@ -11974,7 +12145,11 @@ c         close(134)
             open (unit=15,file='./output/hrdata4proj_ts.dat'
      $           ,status='unknown')
             read (15,*)cjunk
-            write (133,*)'proj_rea_coo(0=yes(def),1=no) ',iprojrcoo
+            if(inumpoints.eq.numpointsf+1)then
+               write (133,*)'proj_rea_coo(0=yes(def),1=no) ',1
+            else
+               write (133,*)'proj_rea_coo(0=yes(def),1=no) ',iprojrcoo
+            endif
             read (15,*)cjunk,nhind
             write (133,*)cjunk,nhind
 
@@ -11993,7 +12168,11 @@ c         close(134)
             enddo
             close(15)
          else
-            write (133,*)'proj_rea_coo(0=yes(def),1=no) ',iprojrcoo
+            if(inumpoints.eq.numpointsf+1)then
+               write (133,*)'proj_rea_coo(0=yes(def),1=no) ',1
+            else
+               write (133,*)'proj_rea_coo(0=yes(def),1=no) ',iprojrcoo
+            endif
             write (133,*)'numrotors ',0
          endif
 
@@ -12011,7 +12190,11 @@ c         close(134)
          write (333,*) 'gradient'       
          do iatom = 1, natom
             write (133,'(A70)') grad(iatom,inumpoints)
-            write (333,'(A70)') grad(iatom,inumpoints)
+            if(inumpoints.eq.numpointsf+1)then
+               write (333,'(A70)') gradts(iatom)
+            else
+               write (333,'(A70)') grad(iatom,inumpoints)
+            endif
          enddo
         
          write (133,*) 'Hessian'
@@ -12034,9 +12217,27 @@ c         close(134)
      +    ./irc_files/input"I0.3 )
          call commrun(command1)
 
+         if(intfreq.eq.1)then
+            open(unit=15,file='geom_bmat.xyz',status='unknown')
+            write(15,*)natom
+            write(15,*)'IRC geom num ',inumpoints
+            open(unit=99,status='unknown')
+            do j=1,natom
+               write(99,*)atgeom_pr(j,inumpoints)
+               rewind(99)
+               read(99,*)ijunk,ijunk,ijunk,coox,cooy,cooz
+               write (15,*)'at',coox,cooy,cooz
+               rewind(99)
+            enddo
+            close(99)
+            close(15)
+            call bmatrix(0,1)
+c            write(*,*)'ok up to here'
+c            stop
+         endif
          command1='RPHt.exe'
          call commrun(command1)
-      
+
 cc         now read projected frequencies
 
          open (unit=15,file='hrproj_freq.dat'
@@ -12049,6 +12250,19 @@ cc         now read projected frequencies
          enddo
          write(16,*)
          close(15)
+
+         if(intfreq.eq.1)then
+            open (unit=15,file='hrprojint_freq.dat'
+     $         ,status='unknown')
+            nfreq=3*natom-nhind-1-6
+            do j=1,nfreq
+               read(15,*)freqintproj(j,inumpoints),eigen
+               write(16,*)freqintproj(j,inumpoints)
+               if(eigen.lt.0)freqintproj(j,inumpoints)=0.
+            enddo
+            write(16,*)
+            close(15)
+         endif
 
 cc         now read frequencies projected for rot trasl and RC but not HR
 
@@ -12198,6 +12412,7 @@ cc here ends the cycle over the total number of IRC points
       close(17)
       close(18)
       close(333)
+
 
 cc determine the scaling factors for the HR potentials
 
@@ -12810,35 +13025,70 @@ c      stop
 
       open(unit=107,file='./me_files/variational.me',
      +     status='unknown')
+      if(intfreq.eq.1)then
+         open(unit=109,file='./me_files/variational_xyz.me',
+     +        status='unknown')
+      endif
+
+
       if (iabs.eq.1) then
          if (nts.eq.1) write (107,*) 'Barrier TS REACS WR'
          if (nts.eq.2) write (107,*) 'Barrier B2 WR PRODS'
          if (nts.eq.3) write (107,*) 'Barrier B2 WR WP'
+         if(intfreq.eq.1)then
+            if (nts.eq.1) write (109,*) 'Barrier TS REACS WR'
+            if (nts.eq.2) write (109,*) 'Barrier B2 WR PRODS'
+            if (nts.eq.3) write (109,*) 'Barrier B2 WR WP'
+         endif
       endif
       if (iadd.eq.1) then
          if (nts.eq.1) write (107,*) 'Barrier TS REACS WP'
          if (nts.eq.2) write (107,*) 'Barrier B2 WR WP'
+         if(intfreq.eq.1)then
+         if (nts.eq.1) write (109,*) 'Barrier TS REACS WP'
+         if (nts.eq.2) write (109,*) 'Barrier B2 WR WP'
+         endif
       endif
       if (iiso.eq.1) then
          if(ipr1.eq.0)then
             write (107,*) 'Barrier TS REACS WP'
+            if(intfreq.eq.1)then
+               write (109,*) 'Barrier TS REACS WP'
+            endif
          else
             write (107,*) 'Barrier TS REACS PRODS'
+            if(intfreq.eq.1)then
+               write (109,*) 'Barrier TS REACS PRODS'
+            endif
          endif
       endif
       if (ibeta.eq.1) then
          write (107,*) 'Barrier TS REACS PRODS'
+            if(intfreq.eq.1)then
+               write (109,*) 'Barrier TS REACS PRODS'
+            endif
       endif
 
       write(107,*)'Variational'
+      if(intfreq.eq.1)then
+         write(109,*)'Variational'
+      endif
       do inumpoints=1,numpointstot
          nfreqtest=3*natom-6-1-nhind
          nfreqw=0
-         do j=1,nfreq
-            if(freqproj(j,inumpoints).ne.0)then
-               nfreqw=nfreqw+1
-            endif
-         enddo
+         if(intfreq.eq.0)then
+            do j=1,nfreq
+               if(freqproj(j,inumpoints).ne.0)then
+                  nfreqw=nfreqw+1
+               endif
+            enddo
+         else
+            do j=1,nfreq
+               if(freqintproj(j,inumpoints).ne.0)then
+                  nfreqw=nfreqw+1
+               endif
+            enddo
+         endif
          if(nfreqw.ne.nfreqtest) goto 9999
 
          write(107,*)'RRHO            !  ',inumpoints
@@ -12851,6 +13101,20 @@ c      stop
             write(107,*)'          SymmetryFactor ',symf
             write(107,*)'End'
          endif
+
+         if(intfreq.eq.1)then
+            write(109,*)'RRHO            !  ',inumpoints
+            write(109,*)'Geometry[angstrom] ',natom
+            do j=1,natom
+               write(109,'(A80)')atgeom_me(j,inumpoints)
+            enddo
+            if(nhindmd.eq.0)then
+               write(109,*)'	Core 	RigidRotor'
+               write(109,*)'          SymmetryFactor ',symf
+               write(109,*)'End'
+            endif
+         endif
+
          if(nhind.ne.0.or.nhindmd.ne.0)then
             if(nhindmd.eq.0)then
                open(unit=108,file='./me_files/ts_hr.me',
@@ -12864,18 +13128,23 @@ c      stop
                do ij=1,24
                   read(108,'(A70)')rot2dline
                   write(107,*)rot2dline
+                  if(intfreq.eq.1) write(109,*)rot2dline
                enddo
             enddo
             nhind_res=nhind-2*nhindmd
             do ir=1,nhind_res
                read(108,'(A60)')rotline
                write(107,*)rotline
+               if(intfreq.eq.1) write(109,*)rotline
                read(108,'(A60)')rotline
                write(107,*)rotline
+               if(intfreq.eq.1) write(109,*)rotline
                read(108,'(A60)')rotline
                write(107,*)rotline
+               if(intfreq.eq.1) write(109,*)rotline
                read(108,'(A60)')rotline
                write(107,*)rotline
+               if(intfreq.eq.1) write(109,*)rotline
                call LineRead(108)
                open (unit=99,status='unknown')
                rewind (99)
@@ -12884,6 +13153,7 @@ c      stop
                read(99,*)numpot
                close(99)
                write(107,*)' Potential[kcal/mol] ',numpot 
+             if(intfreq.eq.1)write(109,*)' Potential[kcal/mol] ',numpot 
                read(108,*)(rotpot(j),j=1,numpot)
                if(hr_rescale.eq.'HRCC') then
                   do j=1,numpot
@@ -12891,8 +13161,10 @@ c      stop
                  enddo
                endif
                write(107,1111)(rotpot(j),j=1,numpot)
+               if(intfreq.eq.1)write(109,1111)(rotpot(j),j=1,numpot)
                read(108,'(A60)')rotline
                write(107,*)rotline
+               if(intfreq.eq.1) write(109,*)rotmore hrline
             enddo
             close(108)
          endif
@@ -12903,13 +13175,27 @@ cc since along the reaction path the negative freqs that may emerge
 cc are set to zero
       
          nfreqw=0
-         do j=1,nfreq
-            if(freqproj(j,inumpoints).ne.0)then
-               nfreqw=nfreqw+1
-            endif
-         enddo
+         if(intfreq.eq.0)then
+            do j=1,nfreq
+               if(freqproj(j,inumpoints).ne.0)then
+                  nfreqw=nfreqw+1
+               endif
+            enddo
+         else
+            do j=1,nfreq
+               if(freqintproj(j,inumpoints).ne.0)then
+                  nfreqw=nfreqw+1
+               endif
+            enddo
+         endif
          write(107,*)'    Frequencies[1/cm] ',nfreqw
-         write(107,8010) (freqproj(j,inumpoints),j=1,nfreqw)
+         if(intfreq.eq.1) write(109,*)'    Frequencies[1/cm] ',nfreqw
+         if(intfreq.eq.0)then
+            write(107,8010) (freqproj(j,inumpoints),j=1,nfreqw)
+         else
+            write(107,8010) (freqintproj(j,inumpoints),j=1,nfreqw)
+            write(109,8010) (freqproj(j,inumpoints),j=1,nfreqw)
+         endif
          write(107,*)'ZeroEnergy[kcal/mol] ',rc_ene_kcal(inumpoints)
          write (107,*) ' ElectronicLevels[1/cm]           ',nelec
          do ielec = 1, nelec
@@ -12917,6 +13203,15 @@ cc are set to zero
          enddo
          write(107,*)'End'
          write(107,*)'!*********************************************'
+         if(intfreq.eq.1)then
+            write(109,*)'ZeroEnergy[kcal/mol] ',rc_ene_kcal(inumpoints)
+            write (109,*) ' ElectronicLevels[1/cm]           ',nelec
+            do ielec = 1, nelec
+               write (109,*) eelec(ielec),gelec(ielec)
+            enddo
+            write(109,*)'End'
+            write(109,*)'!*********************************************'
+         endif
  9999    continue
       enddo
 
@@ -12945,19 +13240,69 @@ cc are set to zero
             write(107,*)'   ImaginaryFrequency[1/cm]   ',freq_imag
             write(107,*)'   File imactint.dat'
          endif
+         if(intfreq.eq.1) then
+            if(imdtunn.ne.1) then
+               write(109,*)'      Tunneling    Eckart'
+               write(109,*)'      ImaginaryFrequency[1/cm] ',freq_imag
+               write(109,*)'      WellDepth[kcal/mol]       $wdepfor'
+               write(109,*)'      WellDepth[kcal/mol]       $wdepback'
+            else
+               write(109,*)'      Tunneling    Read'
+               write(109,*)'   CutoffEnergy[1/cm]       2500'
+               write(109,*)'   ImaginaryFrequency[1/cm]   ',freq_imag
+               write(109,*)'   File imactint.dat'
+            endif
+         endif
       endif
       write(107,*)'End '
+      if(intfreq.eq.1) write(109,*)'End '
+
 c      write(107,*)'End '
 c      write(107,*)'End '
 
       close (107)
+      close (109)
       close (unit=96,status='keep')
 
- 2000    format (A80,1X,I10)
- 2001    format (A160)
- 1111    format (100(1X,f7.2))
- 8010 format (1x,10G12.5)
+      if(intfreq.eq.1)then
+         command1='cp -f ./me_files/variational.me 
+     + ./me_files/variational_int.me'
+         call commrun(command1)
+      endif
 
+cc write frequencies along MEP
+ccccc
+      open(unit=17,file='freq_proj_xyz.out',status='unknown')
+      do inumpoints=1,numpointstot
+         write(17,8001)rc_coord(inumpoints),
+     +                 (freqproj(j,inumpoints),j=1,nfreqw)
+      enddo
+      close(17)
+
+      if(intfreq.eq.1)then
+         open(unit=16,file='freq_proj_int.out',status='unknown')
+         do inumpoints=1,numpointstot
+            write(16,8001)rc_coord(inumpoints),
+     +                    (freqintproj(j,inumpoints),j=1,nfreqw)
+         enddo
+         close(16)
+      endif
+
+      command1='cp -f ./freq_proj_xyz.out ./md_tunn'
+      call commrun(command1)
+
+      if(intfreq.eq.1)then
+         command1='cp -f ./freq_proj_int.out ./md_tunn'
+         call commrun(command1)
+      endif
+
+
+ 2000 format (A80,1X,I10)
+ 2001 format (A160)
+ 1111 format (100(1X,f7.2))
+ 8001 format (1x,f7.2,1x,100G12.5)
+ 8010 format (1x,10G12.5)
+      
       return
       end
 
@@ -16149,17 +16494,23 @@ cc now determine new parameters for reacting atoms
       readis=sqrt((coox1-coox2)**2+(cooy1-cooy2)**2+(cooz1-cooz2)**2)
       dstart=readis
 
-      open(unit=23,file='dihed.dat',status='unknown')
-      write(23,*)coox1,cooy1,cooz1
-      write(23,*)coox2,cooy2,cooz2
-      write(23,*)coox3,cooy3,cooz3
-      write(23,*)coox4,cooy4,cooz4
-      close(23)
-      call dihedral
-      open(unit=23,file='dihed.res',status='unknown')
-      read(23,*)reaang
-      read(23,*)readih
-      close(23)
+c      open(unit=23,file='dihed.dat',status='unknown')
+c      write(23,*)coox1,cooy1,cooz1
+c      write(23,*)coox2,cooy2,cooz2
+c      write(23,*)coox3,cooy3,cooz3
+c      write(23,*)coox4,cooy4,cooz4
+c      close(23)
+c      call dihedral
+c      open(unit=23,file='dihed.res',status='unknown')
+c      read(23,*)reaang
+c      read(23,*)readih
+c      close(23)
+
+cc to be checked - changed on 19/10
+
+      call xyz_to_zmat(coox1,cooy1,cooz1,coox2,cooy2,cooz2,
+     +  coox3,cooy3,cooz3,coox4,cooy4,cooz4,reaang,readih)
+
       write(*,*)'readis is ',readis
 
 cc now create new input
@@ -16681,4 +17032,2134 @@ c      write(*,*)'natom is ', natom
       end
 
 
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
+      subroutine bmatrix(ispecies,ifile)
+
+      implicit double precision (a-h,o-z)
+
+      include 'data_estoktp.fi'
+      include 'param_estoktp.fi'
+
+c      dimension natomnumb(natommx)
+      dimension tau(ntaumx),taumn(ntaumx),taumx(ntaumx),freq(nmdmx)
+      dimension coord(natommx,ndim),xint(3*natommx),xinti(3*natommx),
+     $ abcrot(ndim),xintt(3*natommx)
+
+      dimension xintp(3*natommx),xintn(3*natommx)
+      dimension xintpp(3*natommx),xintpn(3*natommx)
+      dimension xintnp(3*natommx),xintnn(3*natommx)
+
+      dimension bmat(3*natommx,3*natommx)
+      dimension cmat(3*natommx,3*natommx,3*natommx)
+
+      dimension coox(natommx),cooy(natommx),cooz(natommx)
+      dimension cooxn(natommx),cooyn(natommx),coozn(natommx)
+      dimension cooxp(natommx),cooyp(natommx),coozp(natommx)
+
+      dimension cooxpp(natommx),cooypp(natommx),coozpp(natommx)
+      dimension cooxnp(natommx),cooynp(natommx),cooznp(natommx)
+      dimension cooxpn(natommx),cooypn(natommx),coozpn(natommx)
+      dimension cooxnn(natommx),cooynn(natommx),cooznn(natommx)
+
+      dimension cooxyz(3*natommx)
+      dimension ibconn(natommx),iaconn(natommx),idconn(natommx)
+      dimension idummy(natommx),iangind(3*natommx)
+      dimension ianginda(3*natommx),iangindd(3*natommx)
+      dimension idihed(natommx)
+      dimension bval(natommx),aval(natommx),dval(natommx)
+
+
+      LOGICAL leof,lsec,ltit
+      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+     $ word4,word5,word6,word7
+      character*20 bname(natommx),anname(natommx),dname(natommx)
+     $ ,atname(natommx),bconnt(natommx),aconnt(natommx),dconnt(natommx)
+
+      character*20 filename
+      character*20 stoichname
+      character*60 command1
+
+      character*60 atomlabel(natommx)
+      character*2 aname
+      character*1 aname1(natommx)
+      character*30 cjunk
+      character*30 angsub1,angsub2
+      character*30 nameout,nameoutc
+      character*30 gmem
+      character*30 intcoor(3*natommx)
+      character*30 intcoort(3*natommx)
+      character*20 bislab(ntaumx)
+
+      include 'filcomm.f'
+
+      if (ispecies.eq.1) then
+         open (unit=15,file='./data/reac1.dat',status='old')
+         open (unit=17,file='./output/reac1_opt.out',status='unknown')
+         if(ifile.eq.0)then
+            open (unit=18,file='./geoms/reac1_l1.xyz',status='unknown')
+         endif
+         nameout='reac1_bmat'
+         nameoutc='reac1_cmat'
+         inp_type=1
+      endif
+      if (ispecies.eq.2) then
+         open (unit=15,file='./data/reac2.dat',status='old')
+         open (unit=17,file='./output/reac2_opt.out',status='unknown')
+         if(ifile.eq.0)then
+            open (unit=18,file='./geoms/reac2_l1.xyz',status='unknown')
+         endif
+         nameout='reac2_bmat'
+         nameoutc='reac2_cmat'
+         inp_type=1
+      endif
+      if (ispecies.eq.3) then
+         open (unit=15,file='./data/prod1.dat',status='old')
+         open (unit=17,file='./output/prod1_opt.out',status='unknown')
+         if(ifile.eq.0)then
+            open (unit=18,file='./geoms/prod1_l1.xyz',status='unknown')
+         endif
+         nameout='prod1_bmat'
+         nameoutc='prod1_cmat'
+         inp_type=1
+      endif
+      if (ispecies.eq.4) then
+         open (unit=15,file='./data/prod2.dat',status='old')
+         open (unit=17,file='./output/prod2_opt.out',status='unknown')
+         if(ifile.eq.0)then
+            open (unit=18,file='./geoms/prod2_l1.xyz',status='unknown')
+         endif
+         nameout='prod2_bmat'
+         nameoutc='prod2_cmat'
+         inp_type=1
+      endif
+      if (ispecies.eq.5) then
+         open (unit=15,file='./data/wellr.dat',status='old')
+         open (unit=17,file='./output/wellr_opt.out',status='unknown')
+         if(ifile.eq.0)then
+            open (unit=18,file='./geoms/wellr_l1.xyz',status='unknown')
+         endif
+         nameout='wellr_bmat'
+         nameoutc='wellr_cmat'
+         inp_type=2
+      endif
+      if (ispecies.eq.6) then
+         open (unit=15,file='./data/wellp.dat',status='old')
+         open (unit=17,file='./output/wellp_opt.out',status='unknown')
+         if(ifile.eq.0)then
+            open (unit=18,file='./geoms/wellp_l1.xyz',status='unknown')
+         endif
+         nameout='wellp_bmat'
+         nameoutc='wellp_cmat'
+         inp_type=1
+      endif
+      if (ispecies.eq.51) then
+         open (unit=15,file='./data/wellp.dat',status='old')
+         if(igeom_wellr.eq.2)then
+            open (unit=17,file='./output/ts_opt.out',status='unknown')
+         else
+            open(unit=17,file='./output/wellp_opt.out',status='unknown')
+         endif
+         if(ifile.eq.0)then
+            open (unit=18,file='./geoms/wellr_l1.xyz',status='unknown')
+         endif
+         nameout='wellr_bmat'
+         nameoutc='wellr_cmat'
+         inp_type=2
+      endif
+      if (ispecies.eq.61) then
+         open (unit=15,file='./data/wellp.dat',status='old')
+         if(igeom_wellp.eq.2)then
+            open (unit=17,file='./output/ts_opt.out',status='unknown')
+         else
+            open(unit=17,file='./output/wellp_opt.out',status='unknown')
+         endif
+         if(ifile.eq.0)then
+            open (unit=18,file='./geoms/wellp_l1.xyz',status='unknown')
+         endif
+         nameout='wellp_bmat'
+         nameoutc='wellp_cmat'
+         inp_type=2
+      endif
+      if (ispecies.eq.0) then
+         open (unit=15,file='./data/ts.dat',status='old')
+         open (unit=17,file='./output/ts_opt.out',status='unknown')
+         if(ifile.eq.0)then
+            open (unit=18,file='./geoms/tsgta_l1.xyz',status='unknown')
+         endif
+         nameout='tsgta_bmat'
+         nameoutc='tsgta_cmat'
+         inp_type=2
+      endif
+
+cc initialize parameters and files
+
+      if(ifile.eq.1)then         
+         open (unit=18,file='geom_bmat.xyz',status='unknown')
+      endif
+
+cc first read blocks that are common for input type 1 and 2
+
+      if (idebug.ge.2) write (66,*) ' starting zmat input'
+      call LineRead (0)
+
+cc read specific input for input type 1
+
+      if (inp_type.eq.1) then
+
+c     natomt is to account for dummy atoms
+         do while (WORD.NE.'NATOM')
+            call LineRead (15)
+            if (WORD.EQ.'END') then
+               write (66,*) 'natom must be defined'
+               stop
+            endif
+         enddo
+         read (15,*) natom,natomt,ilin
+         if (natomt.gt.natommx) then
+            write (66,*) 'natomt too large',natomt,natommx
+            stop
+         endif
+         rewind(15)
+
+         write (66,*) 'test0',natomt,atomlabel(1)
+
+         do while (WORD.NE.'CHARGE')
+            call LineRead (15)
+            if (WORD.EQ.'END') then
+               write (66,*) 'charge and spin must be defined'
+               stop
+            endif
+         enddo
+         read (15,*) icharge,ispin
+         do iatom = 1 , natomt
+            read (15,'(A60)') atomlabel(iatom)
+         enddo
+         rewind(15)
+
+         do while (WORD.NE.'NTAU')
+            call LineRead (15)
+            if (WORD.EQ.'END') then
+               write (66,*) 'sampling coordinates must be defined'
+               stop
+            endif
+         enddo
+         read (15,*) ntau
+         rewind(15)
+         call  LineRead (0)
+
+         if (natom.ne.1) then
+            do while (WORD.NE.'INTCOOR')
+               call LineRead (15)
+               if (WORD.EQ.'END') then
+                  write (66,*) 'internal coordinates must be defined'
+                  stop
+               endif
+            enddo
+            ncoord = 3*natom-6-ntau
+            if (natom.eq.1) ncoord = 0
+            if (natom.eq.2) ncoord = 1
+            do icoord = 1 , ncoord
+               call LineRead (15)
+               intcoor(icoord) = word
+            enddo
+            rewind(15)
+         endif
+
+         do while (WORD.NE.'NTAU')
+            call LineRead (15)
+            if (WORD.EQ.'END') then
+               write (66,*) 'sampling coordinates must be defined'
+               stop
+            endif
+         enddo
+         read (15,*) ntau
+         if (ntau.gt.ntaumx) then
+            write (66,*) 'ntau too large',ntau,ntaumx
+            stop
+         endif
+         if (ntau.ne.0) then
+            read (15,*)
+            do itau = 1 , ntau
+               read (15,*) bislab(itau),taumn(itau),taumx(itau)
+               write (66,*) bislab(itau),taumn(itau),taumx(itau)
+               open (unit=99,status='unknown')
+               rewind (99)
+               write (99,*)bislab(itau)
+               rewind (99)
+               call LineRead (99)
+               icoord=ncoord+itau
+               intcoor(icoord)=WORD
+               close (unit=99,status='keep')
+            enddo
+         endif
+         rewind(15)
+cc now read optimized geometry parameters
+         ncoord = 3*natom-6
+         if(natom.eq.2) ncoord = 1
+         if(natom.eq.1) ncoord = 0
+         read (17,*)
+         do icoord = 1 , ncoord
+            call LineRead (17)
+c     xinti(icoord) = word
+c     intcoori(icoord) = word
+            OPEN (unit=99,status='unknown')
+            REWIND (99)
+            WRITE (99,1000) WORD
+ 1000       FORMAT (A30)
+            REWIND (99)
+            READ (99,*) xint(icoord)
+            close (unit=99,status='keep')
+         enddo
+         close (unit=17,status='keep')
+         close (unit=15,status='keep')
+
+      else if (inp_type.eq.2) then
+
+cc here we assume that the TS is not linear
+
+         ilin=0
+         ilin1=0
+         ilin2=0
+
+cc now read input of type 2
+         do while (WORD.NE.'CHARGE')
+            call LineRead (15)
+            if (WORD.EQ.'END') then
+               write (66,*) 'charge and spin must be defined'
+               stop
+            endif
+         enddo
+         read (15,*) icharge,ispin
+         rewind(15)
+         call  LineRead (0)
+
+         do while (WORD.NE.'END')
+            call LineRead (15)
+            if (WORD.EQ.'INTCOORD') then
+               read (15,*) nintcoord
+               nlbend=0
+               do j=1,nintcoord
+                  call LineRead (15)
+                  if (WORD.EQ.'LBEND')then
+                     nlbend=nlbend+1
+                     angsub1=WORD2
+                     angsub2=WORD3
+                  endif
+               enddo
+            endif
+         enddo
+         rewind(15)
+         call  LineRead (0)
+
+c         write(*,*)'angsub1 ',angsub1
+c         write(*,*)'angsub2 ',angsub2
+c         stop
+
+         open (unit=25,file='./data/reac1.dat',status='old')
+
+         do while (WORD.NE.'NTAU')
+            call LineRead (25)
+            if (WORD.EQ.'END') then
+               write (66,*) 'sampling coords of reac1 must be defined'
+               stop
+            endif
+         enddo
+         read (25,*) ntau1
+         rewind 25
+
+c     natomt is to account for dummy atoms
+         do while (WORD.NE.'NATOM')
+            call LineRead (25)
+            if (WORD.EQ.'END') then
+               write (66,*) 'natom in reac1 must be defined'
+               stop
+            endif
+         enddo
+         read (25,*) natom1,natomt1,ilin1
+         close (25)
+
+cc get data from react2 file
+
+         if(iabs.eq.1.or.iadd.eq.1)then
+            open (unit=25,file='./data/reac2.dat',status='old')
+            
+            do while (WORD.NE.'NTAU')
+               call LineRead (25)
+               if (WORD.EQ.'END') then
+                  write (66,*) 'samp coords of reac2 must be defined'
+                  stop
+               endif
+            enddo
+            read (25,*) ntau2
+            rewind 25
+
+c     natomt is to account for dummy atoms
+            do while (WORD.NE.'NATOM')
+               call LineRead (25)
+               if (WORD.EQ.'END') then
+                  write (66,*) 'natom must be defined'
+                  stop
+               endif
+            enddo
+            read (25,*) natom2,natomt2,ilin2
+            close (25)
+         endif
+cc now we can determine the total number of atoms for the TS/wellr/wellp
+         if(iadd.eq.1.or.iabs.eq.1)then
+            natom = natom1+natom2
+         else if (iiso.eq.1.or.ibeta.eq.1)then
+            natom = natom1
+         endif
+cc modified         if (iadd.eq.1) natomt = natomt1+natomt2
+         if (iadd.eq.1) natomt = natomt1+natomt2
+         if (iabs.eq.1) natomt = natomt1+natomt2+1
+         if (iiso.eq.1) natomt = natomt1
+         if (ibeta.eq.1) natomt = natomt1
+
+cc if linear molecule reacting with atom in abs assume TS is linear
+         if(iabs.eq.1.and.natom2.eq.1.and.ispecies.eq.0.
+     $      and.ilin1.eq.1) then
+            ilin=1
+         endif
+
+cc if linear molecule reacting with linear radical in abs assume TS is linear
+         if(iabs.eq.1.and.ilin2.eq.1.and.ispecies.eq.0.and
+     $      .ilin1.eq.1)then
+            ilin=1
+         endif
+c        natomt = natomt1+natomt2+1
+         
+         close (unit=15,status='keep')
+
+c natomt is to account for dummy atoms
+         if (natomt.gt.natommx) then
+            write (66,*) 'natomt too large',natomt,natommx
+            stop
+         endif
+
+c gaussian com file data
+         read (17,*)
+         if (idebug.ge.2) write (6,*) ' starting gaussian input'
+         do iatom = 1 , natomt
+            read (17,'(A60)') atomlabel(iatom)
+         enddo
+
+cc read coordinate names
+
+         ncoord = 3*natom-6
+
+         do iint = 1 , ncoord
+            read (17,*) intcoor(iint),xint(iint)
+         enddo
+         close (unit=17,status='keep')
+      endif
+
+      do j=1,natomt
+         write(*,*)'atomlabel is ',atomlabel(j)
+      enddo
+      do j=1,ncoord
+         write(*,*)'coord is ',intcoor(j),xint(j)
+      enddo
+
+cc initialize vectors
+      do j=1,ncoord 
+         bname(j)=''
+         anname(j)=''
+         dname(j)=''
+         bval(j)=0.
+         aval(j)=0.
+         dval(j)=0.
+      enddo
+      do j=1,natomt
+         ibconn(j)=0
+         iaconn(j)=0
+         idconn(j)=0
+      enddo
+cc
+      call read_zmat(atomlabel,natom,natomt,intcoor,bislab,ibconn,
+     $ iaconn,idconn,bname,anname,dname,atname,idummy,isited,jsited,
+     $ ksited,bconnt,aconnt,dconnt)
+ 
+c      write(*,*)'bname is ',bname(2)
+c      write(*,*)'anname is ',anname(4)
+c      do j=1,natomt
+c         write(*,*) 'iaconn ',j,iaconn(j)
+c         write(*,*) 'idconn ',j,idconn(j)
+c      enddo
+c      stop
+cc this does not account for dummy atoms defined with  given quantities
+
+      do k=1,natomt
+         do j=1,ncoord
+            if(intcoor(j).eq.bname(k))bval(k)=xint(j)
+            if(intcoor(j).eq.anname(k))aval(k)=xint(j)
+            if(intcoor(j).eq.dname(k))dval(k)=xint(j)
+         enddo
+      enddo
+c      write(*,*)'aval4 is ',aval(4)
+
+
+cc all that follows is not necessary. we read the intial geometry
+cc I leave (coomented) it as it can be useful sooner or later
+
+cc   define starting xyz geometry. 
+cc   convention: atom 1 is is 0 0 0
+cc   atom 2 bd 0 0
+cc   atom 3 on xy plane 
+
+c      coox(1)=0.
+c      cooy(1)=0.
+c      cooz(1)=0.
+c      coox(2)=bval(2)
+c      cooy(2)=0.
+c      cooz(2)=0.
+c      if(ibconn(3).eq.2) then
+c         coox(3)=bval(2)-bval(3)*cos(aval(3)/180.*pigr)
+c         cooy(3)=bval(3)*sin(aval(3)/180.*pigr)
+c         cooz(3)=0.
+c      else if(ibconn(3).eq.1)then
+c         coox(3)=bval(3)*cos(aval(3)/180.*pigr)
+c         cooy(3)=bval(3)*sin(aval(3)/180.*pigr)
+c         cooz(3)=0.
+c      else
+c         write(*,*)'I am lost with this Z-Mat'
+c         write(*,*)'in subroutine Bmatrix'
+c         write(*,*)'for species ',ispecies
+c         stop
+c      endif
+c      xa=0.
+c      ya=0.
+c      za=0.
+c      do j=4,natomt
+c         call zmat_to_xyz(xa,ya,za,coox(ibconn(j)),cooy(ibconn(j)),
+c     $ cooz(ibconn(j)),coox(iaconn(j)),cooy(iaconn(j)),
+c     $ cooz(iaconn(j)),
+c     $ coox(idconn(j)),cooy(idconn(j)),cooz(idconn(j)),
+c     $ bval(j),aval(j),dval(j))
+c         coox(j)=xa
+c         cooy(j)=ya
+c         cooz(j)=za
+c         write(*,*) j,coox(j),cooy(j),cooz(j)
+c         write(*,*)
+c      enddo
+
+
+cc read the zmat from the level 1 output
+      read(18,*)natomcar
+      read(18,*)cjunk
+      do j=1,natomcar
+         read(18,*)cjunk,coox(j),cooy(j),cooz(j)
+c         write(*,*)cjunk,coox(j),cooy(j),cooz(j)
+      enddo
+      close(18)
+cc we do not need a dummy atom check if there are no dummy atoms in the cart matrix
+c      if(natomcar.eq.natom)then
+c         do j=1,natomcar
+c            idummy(j)=0
+c         enddo
+c      endif
+c      natomt=natom
+
+cc this is a check that we can compute the xyz matrix and convert back to internal
+c      write(*,*)'ok1 '
+c      stop
+      ntau=0
+      ifilu=1
+      call update_zmat(natom,natomt,intcoor,bislab,ibconn,iaconn
+     $    ,idconn,bname,anname,dname,atname,coox,cooy,cooz,xinti,tauopt,
+     $     ntau,idummy,ilin_fr,aconnt,bconnt,dconnt,atomlabel,ifilu)
+      if(xint(1).eq.0)then
+         write(*,*)'failed in updating geometry'
+         write(*,*)'probably error of g09, check output'
+         write(*,*)'stopping now'
+         stop
+      endif
+
+c      write(*,*)'ok2 '
+
+      open(unit=10,file='temp1.xyz',status='unknown')
+      do j=1,ncoord
+         write(10,*)intcoor(j),xint(j),xinti(j),abs(xint(j)-xinti(j))
+      enddo
+      close(10)
+
+      do j=1,ncoord
+         xint(j)=xinti(j)
+      enddo
+
+c      stop
+
+      open(unit=10,file='temp2.xyz',status='unknown')
+      write(10,*)natom
+      write(10,*)'test'
+      inda=0
+      do j=1,natom
+         aname1(j)=atname(j)
+         if(idummy(j).ne.1)then
+            inda=inda+1
+      endif
+      write(10,*)aname1(inda),coox(j),cooy(j),cooz(j)
+      enddo
+      close(10)
+
+c      stop
+
+cc now we update the coordinates using those etransformed in our procedure for consistentcy
+cc with dimension of dihedral angles
+
+      do j=1,ncoord
+         xint(j)=xinti(j)
+      enddo
+
+cc here I inizialize indexes to check if int coor is an angle or a dihedral
+cc
+
+      do k=1,ncoord
+         iangind(k)=0
+         ianginda(k)=0
+         iangindd(k)=0
+      enddo
+
+
+      do k=1,ncoord
+         do j=1,ncoord
+            if(intcoor(k).eq.anname(j))iangind(k)=1
+            if(intcoor(k).eq.anname(j))ianginda(k)=1
+            if(intcoor(k).eq.dname(j))iangind(k)=1
+            if(intcoor(k).eq.dname(j))iangindd(k)=1
+         enddo
+      enddo
+
+
+cc this is to check
+c      do ik=1,natom
+c         cooxp(ik)=coox(ik)
+c         cooyp(ik)=cooy(ik)
+c         coozp(ik)=cooz(ik)
+c      enddo
+c      coozp(5)=coozp(5)+0.01
+
+c      call update_zmat(natom,natomt,intcoor,bislab,ibconn,iaconn
+c     $    ,idconn,bname,anname,dname,atname,cooxp,cooyp,coozp,xintp,
+c     $      tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,dconnt,atomlabel,
+c     $      ifilu)
+
+c      do j=1,ncoord
+c         write(*,*)intcoor(j),xint(j),xintp(j)
+c      enddo
+c      stop
+
+
+
+
+
+cc now we can compute the B matrix using central difference
+cc Bik=dqi/dxk
+
+      deltax=0.01
+      deltay=0.01
+      deltaz=0.01
+      kind=0
+      kaind=0
+      ifilu=0
+
+      do ij=1,ncoord
+         do ik=1,3*natom
+            bmat(ij,ik)=0.
+         enddo
+      enddo
+
+c      do k=1,natomt
+c         write(*,*)'idummy k atom is ', idummy(k)
+c      enddo
+c      stop
+
+      do k=1,natomt
+         if(idummy(k).ne.1)then
+            kind=kind+1
+            kaind=kaind+1
+            write(*,*)'k atom is ', k
+            write(*,*)'kaind is ', kaind
+c           write(*,*)'idummy k atom is ', idummy(k)
+            write(*,*)'kind is ', kind
+            do ij=1,ncoord
+               xintp(ij)=0.
+            enddo
+
+cc first perturb x + deltax
+c            write(*,*)'ok1 '
+c            do ik=1,natomt
+            do ik=1,natom
+               cooxp(ik)=coox(ik)
+               cooyp(ik)=cooy(ik)
+               coozp(ik)=cooz(ik)
+            enddo
+            cooxp(kaind)=cooxp(kaind)+deltax
+
+            call update_zmat(natom,natomt,intcoor,bislab,ibconn,iaconn
+     $    ,idconn,bname,anname,dname,atname,cooxp,cooyp,coozp,xintp,
+     $  tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,dconnt,atomlabel,ifilu)
+
+cc then perturb x - deltax
+c            write(*,*)'ok2 '
+c            do ik=1,natomt
+            do ik=1,natom
+               cooxn(ik)=coox(ik)
+               cooyn(ik)=cooy(ik)
+               coozn(ik)=cooz(ik)
+            enddo
+            cooxn(kaind)=cooxn(kaind)-deltax
+
+            call update_zmat(natom,natomt,intcoor,bislab,ibconn,iaconn
+     $    ,idconn,bname,anname,dname,atname,cooxn,cooyn,coozn,xintn,
+     $  tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,dconnt,atomlabel,ifilu)
+
+cc we can now compute the first component of the Bmatrix
+
+            do i=1,ncoord
+               if(abs(xintp(i)-xintn(i)).gt.300)then
+                  if(xintn(i).lt.0)then
+                     xintn(i)=xintn(i)+360.
+                  else if(xintn(i).gt.0)then
+                     xintn(i)=xintn(i)-360.
+                  endif
+                  if(abs(xintp(i)-xintn(i)).gt.300)then
+                     write(*,*)'something did not work here'
+                     write(*,*)'kind= ',kind
+                     write(*,*)'intocoor= ',i
+                     write(*,*)'xintp= ',xintp(i)
+                     write(*,*)'xintn= ',xintn(i)
+                     stop
+                  endif
+               endif
+               bmat(i,kind)=(xintp(i)-xintn(i))/2./deltax
+c               bmat(i,kind)=(xintp(i)-xint(i))/deltax
+c                     write(*,*)'kind= ',kind
+c                     write(*,*)'intocoor= ',i
+c                     write(*,*)'xintp= ',xintp(i)
+c                     write(*,*)'xintn= ',xintn(i)
+            enddo
+
+c            write(*,*)'ok3 '
+cc we now replicate for y
+
+cc first perturb y + deltay
+c            do ik=1,natomt
+            do ik=1,natom
+               cooxp(ik)=coox(ik)
+               cooyp(ik)=cooy(ik)
+               coozp(ik)=cooz(ik)
+            enddo
+            cooyp(kaind)=cooyp(kaind)+deltay
+c            write(*,*)'cooyp= ',cooyp(k)
+
+            call update_zmat(natom,natomt,intcoor,bislab,ibconn,iaconn
+     $    ,idconn,bname,anname,dname,atname,cooxp,cooyp,coozp,xintp,
+     $  tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,dconnt,atomlabel,ifilu)
+
+cc then perturb y - deltay
+c            do ik=1,natomt
+            do ik=1,natom
+               cooxn(ik)=coox(ik)
+               cooyn(ik)=cooy(ik)
+               coozn(ik)=cooz(ik)
+            enddo
+            cooyn(kaind)=cooyn(kaind)-deltay
+c            write(*,*)'cooyn= ',cooyn(k)
+
+            call update_zmat(natom,natomt,intcoor,bislab,ibconn,iaconn
+     $    ,idconn,bname,anname,dname,atname,cooxn,cooyn,coozn,xintn,
+     $  tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,dconnt,atomlabel,ifilu)
+
+cc we can now compute the second(y) component of the Bmatrix for atom k
+
+            kind=kind+1
+c           write(*,*)'kind= ',kind
+           do i=1,ncoord
+               if(abs(xintp(i)-xintn(i)).gt.300)then
+                  if(xintn(i).lt.0)then
+                     xintn(i)=xintn(i)+360.
+                  else if(xintn(i).gt.0)then
+                     xintn(i)=xintn(i)-360.
+                  endif
+                  if(abs(xintp(i)-xintn(i)).gt.300)then
+                     write(*,*)'something did not work here'
+                     write(*,*)'kind= ',kind
+                     write(*,*)'intocoor= ',i
+                     write(*,*)'xintp= ',xintp(i)
+                     write(*,*)'xintn= ',xintn(i)
+                     stop
+                  endif
+               endif
+               bmat(i,kind)=(xintp(i)-xintn(i))/2./deltay
+c               bmat(i,kind)=(xintp(i)-xint(i))/deltay
+c               write(*,*)'intocoor= ',i
+c               write(*,*)'xintp= ',xintp(i)
+c               write(*,*)'xintn= ',xintn(i)
+            enddo
+
+cc we now replicate for z
+
+cc first perturb z + deltaz
+c            do ik=1,natomt
+            do ik=1,natom
+               cooxp(ik)=coox(ik)
+               cooyp(ik)=cooy(ik)
+               coozp(ik)=cooz(ik)
+            enddo
+            coozp(kaind)=coozp(kaind)+deltaz
+
+            call update_zmat(natom,natomt,intcoor,bislab,ibconn,iaconn
+     $    ,idconn,bname,anname,dname,atname,cooxp,cooyp,coozp,xintp,
+     $  tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,dconnt,atomlabel,ifilu)
+
+cc then perturb z - deltaz
+c            do ik=1,natomt
+            do ik=1,natom
+               cooxn(ik)=coox(ik)
+               cooyn(ik)=cooy(ik)
+               coozn(ik)=cooz(ik)
+            enddo
+            coozn(kaind)=coozn(kaind)-deltaz
+
+            call update_zmat(natom,natomt,intcoor,bislab,ibconn,iaconn
+     $    ,idconn,bname,anname,dname,atname,cooxn,cooyn,coozn,xintn,
+     $  tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,dconnt,atomlabel,ifilu)
+
+cc we can now compute the third(z) component of the Bmatrix for atom k
+
+            kind=kind+1
+            do i=1,ncoord
+               if(abs(xintp(i)-xintn(i)).gt.300)then
+                  if(xintn(i).lt.0)then
+                     xintn(i)=xintn(i)+360.
+                  else if(xintn(i).gt.0)then
+                     xintn(i)=xintn(i)-360.
+                  endif
+                  if(abs(xintp(i)-xintn(i)).gt.300)then
+                     write(*,*)'something did not work here'
+                     write(*,*)'kind= ',kind
+                     write(*,*)'intocoor= ',i
+                     write(*,*)'xintp= ',xintp(i)
+                     write(*,*)'xintn= ',xintn(i)
+                     stop
+                  endif
+               endif
+c               write(*,*)'xintp= ',xintp(i)
+c               write(*,*)'xintn= ',xintn(i)
+               bmat(i,kind)=(xintp(i)-xintn(i))/2./deltaz
+c               bmat(i,kind)=(xintp(i)-xint(i))/deltaz
+            enddo
+         endif
+      enddo
+c      write(*,*)'kind is ',kind
+c      write(*,*)'kaind is ',kaind
+
+
+c      do k=1,ncoord
+c         write(*,*)'iangind(k)',k,iangind(k)
+c      enddo
+
+      do k=1,ncoord
+         do j=1,3*natom
+            if(iangind(k).eq.1)bmat(k,j)=bmat(k,j)/180.*pigr
+         enddo
+      enddo
+
+      if(nintcoord.ne.0)then
+
+         do j=1,ncoord
+c         write(*,*)'intcoor(j) ',intcoor(j)
+c         write(*,*)'angsub1 ',angsub1
+            if(intcoor(j).eq.angsub1)ibmatsub1=j
+            if(intcoor(j).eq.angsub2)ibmatsub2=j
+         enddo
+
+         iatsub1=0
+         iatsub2=0
+         do j=1,natomt
+            if(anname(j).eq.angsub1)iatsub1=j
+            if(dname(j).eq.angsub2)iatsub2=j
+         enddo
+
+
+c         write(*,*)'i angsub1 ',ibmatsub1
+c         write(*,*)'i angsub2 ',ibmatsub2
+c         write(*,*)'iatom angsub1 ',iatsub1
+c         write(*,*)'iatom angsub2 ',iatsub2
+c         write(*,*)'ibconn ',ibconn(iatsub1)
+c         write(*,*)'iaconn ',iaconn(iatsub1)
+c         
+c     now update iangsub1 bmat component
+         iatom=1
+         iinda=0
+         bcentx=0.
+         do j=1,3*natom
+            iinda=iinda+1
+            if(iinda.eq.4)then
+               iinda=1
+               iatom=iatom+1
+            endif
+            if((iatom.ne.iatsub1).and.iatom.ne.ibconn(iatsub1).and.
+     +          iatom.ne.iaconn(iatsub1))then
+               bmat(ibmatsub1,j)=0.
+            endif
+         enddo
+         bmat(ibmatsub1,(ibconn(iatsub1)-1)*3+1)=
+     +       -(bmat(ibmatsub1,(iatsub1-1)*3+1)+
+     +         bmat(ibmatsub1,(iaconn(iatsub1)-1)*3+1))/2.
+         bmat(ibmatsub1,(ibconn(iatsub1)-1)*3+2)=
+     +       -(bmat(ibmatsub1,(iatsub1-1)*3+2)+
+     +         bmat(ibmatsub1,(iaconn(iatsub1)-1)*3+2))/2.
+         bmat(ibmatsub1,(ibconn(iatsub1)-1)*3+3)=
+     +       -(bmat(ibmatsub1,(iatsub1-1)*3+3)+
+     +         bmat(ibmatsub1,(iaconn(iatsub1)-1)*3+3))/2.
+
+cc
+cc now determine displacement in orthogonal plane
+cc
+cc  first get components of vector on plane
+         vpx=coox(iatsub1)-coox(ibconn(iatsub1))
+         vpy=cooy(iatsub1)-cooy(ibconn(iatsub1))
+         vpz=cooz(iatsub1)-cooz(ibconn(iatsub1))
+         vpnorm=sqrt(vpx*vpx+vpy*vpy+vpz*vpz)
+         vpx=vpx/vpnorm
+         vpy=vpy/vpnorm
+         vpz=vpz/vpnorm
+cc now update components of of 2nd  bmat linear angle
+cc starting values
+         bm1x=bmat(ibmatsub1,(iatsub1-1)*3+1)
+         bm1y=bmat(ibmatsub1,(iatsub1-1)*3+2)
+         bm1z=bmat(ibmatsub1,(iatsub1-1)*3+3)
+         bm2x=bmat(ibmatsub1,(ibconn(iatsub1)-1)*3+1)
+         bm2y=bmat(ibmatsub1,(ibconn(iatsub1)-1)*3+2)
+         bm2z=bmat(ibmatsub1,(ibconn(iatsub1)-1)*3+3)
+         bm3x= bmat(ibmatsub1,(iaconn(iatsub1)-1)*3+1)
+         bm3y= bmat(ibmatsub1,(iaconn(iatsub1)-1)*3+2)
+         bm3z= bmat(ibmatsub1,(iaconn(iatsub1)-1)*3+3)
+cc project to perpendicular plane
+         bmn1x=bm1y*vpz-bm1z*vpy
+         bmn1y=-bm1x*vpz+bm1z*vpx
+         bmn1z=bm1x*vpy-bm1y*vpx
+         bmn2x=bm2y*vpz-bm2z*vpy
+         bmn2y=-bm2x*vpz+bm2z*vpx
+         bmn2z=bm2x*vpy-bm2y*vpx
+         bmn3x=bm3y*vpz-bm3z*vpy
+         bmn3y=-bm3x*vpz+bm3z*vpx
+         bmn3z=bm3x*vpy-bm3y*vpx
+
+cc update vector.
+
+         do j=1,3*natom
+            bmat(ibmatsub2,j)=0.
+         enddo
+         bmat(ibmatsub2,(iatsub1-1)*3+1)=bmn1x
+         bmat(ibmatsub2,(iatsub1-1)*3+2)=bmn1y
+         bmat(ibmatsub2,(iatsub1-1)*3+3)=bmn1z
+c         write(*,*)'test ',bmat(ibmatsub2,(iatsub1-1)*3+3)
+c         write(*,*)'test2',(iatsub1-1)*3+3
+
+         bmat(ibmatsub2,(ibconn(iatsub1)-1)*3+1)=bmn2x
+         bmat(ibmatsub2,(ibconn(iatsub1)-1)*3+2)=bmn2y
+         bmat(ibmatsub2,(ibconn(iatsub1)-1)*3+3)=bmn2z
+
+         bmat(ibmatsub2,(iaconn(iatsub1)-1)*3+1)=bmn3x
+         bmat(ibmatsub2,(iaconn(iatsub1)-1)*3+2)=bmn3y
+         bmat(ibmatsub2,(iaconn(iatsub1)-1)*3+3)=bmn3z
+
+      endif
+c      stop
+      
+
+
+      open(unit=20,file='bmat.dat',status='unknown')
+      write(20,*)ncoord,3*natom
+      do k=1,ncoord
+         write(20,102)(bmat(k,j),j=1,3*natom)
+      enddo
+      close(20)
+
+      if(ifile.eq.0)then
+         open (unit=99,status='unknown')
+         rewind (99)
+         write (99,100) nameout
+         rewind (99)
+         read (99,101) command1
+         close(99)
+         call commrun(command1)         
+      endif
+
+ 100  format ('cp -f bmat.dat output/'A8,'.dat')
+ 101  format (A100)
+ 102  format (10000(1X,1PE11.4))
+
+
+c      stop
+
+cc now we can compute the C matrix using central difference
+cc Cijk=d2qi/dxj/dxk
+
+c      deltax=0.01
+c      deltay=0.01
+c      deltaz=0.01
+      jind=0
+      kind=0
+      jaind=0
+      kaind=0
+
+      do j=1,natomt
+         if(idummy(j).ne.1)then
+ 
+c*******************************************************************
+cc perturb xj
+            jind=jind+1
+            jaind=jaind+1
+            kind=0
+            kaind=0
+            do k=1,natomt
+            if(idummy(k).ne.1)then
+               kaind=kaind+1
+
+cc  perturb xj + deltaxj
+cc  perturb xk + deltaxk
+               do ij=1,ncoord
+                  xintpp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpp(ik)=coox(ik)
+                  cooypp(ik)=cooy(ik)
+                  coozpp(ik)=cooz(ik)
+               enddo
+               cooxpp(jaind)=cooxpp(jaind)+deltax
+               cooxpp(kaind)=cooxpp(kaind)+deltax
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpp,cooypp,
+     $     coozpp,xintpp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb xj - deltaxj
+cc  perturb xk + deltaxk
+               do ij=1,ncoord
+                  xintnp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnp(ik)=coox(ik)
+                  cooynp(ik)=cooy(ik)
+                  cooznp(ik)=cooz(ik)
+               enddo
+               cooxnp(jaind)=cooxnp(jaind)-deltax
+               cooxnp(kaind)=cooxnp(kaind)+deltax
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnp,cooynp,
+     $     cooznp,xintnp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb xj + deltaxj
+cc  perturb xk - deltaxk
+               do ij=1,ncoord
+                  xintpn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpn(ik)=coox(ik)
+                  cooypn(ik)=cooy(ik)
+                  coozpn(ik)=cooz(ik)
+               enddo
+               cooxpn(jaind)=cooxpn(jaind)+deltax
+               cooxpn(kaind)=cooxpn(kaind)-deltax
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpn,cooypn,
+     $     coozpn,xintpn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb xj - deltaxj
+cc  perturb xk - deltaxk
+               do ij=1,ncoord
+                  xintnn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnn(ik)=coox(ik)
+                  cooynn(ik)=cooy(ik)
+                  cooznn(ik)=cooz(ik)
+               enddo
+               cooxnn(jaind)=cooxnn(jaind)-deltax
+               cooxnn(kaind)=cooxnn(kaind)-deltax
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnn,cooynn,
+     $     cooznn,xintnn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+
+cc we can now compute the first of nine components of the Cmatrix
+               kind=kind+1
+               do i=1,ncoord
+c                  write(*,*)'xpp ',xintpp(i)
+c                  write(*,*)'xnp ',xintnp(i)
+c                  write(*,*)'xpn ',xintpn(i)
+c                  write(*,*)'xnn ',xintnn(i)
+                  if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                     if(xintnp(i).lt.0)then
+                        xintnp(i)=xintnp(i)+360.
+                     else if(xintnp(i).gt.0)then
+                        xintnp(i)=xintnp(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                     if(xintpn(i).lt.0)then
+                        xintpn(i)=xintpn(i)+360.
+                     else if(xintpn(i).gt.0)then
+                        xintpn(i)=xintpn(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                     if(xintnn(i).lt.0)then
+                        xintnn(i)=xintnn(i)+360.
+                     else if(xintnn(i).gt.0)then
+                        xintnn(i)=xintnn(i)-360.
+                     endif
+                     if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+c                  if(jind.eq.kind)then
+c                     cmat(i,jind,kind)=(xintpp(i)-2*xint(i)+
+c     $                    xintnn(i))/4./deltax/deltax
+c                  else
+                     cmat(i,jind,kind)=(xintpp(i)-xintnp(i)-xintpn(i)+
+     $                    xintnn(i))/4./deltax/deltax
+c                  endif
+
+c                  write(*,*)'cmat ', i,jind,kind,cmat(i,jind,kind)
+c                  write(*,*)'xpp ',xintpp(i)
+c                  write(*,*)'xnp ',xintnp(i)
+c                  write(*,*)'xpn ',xintpn(i)
+c                  write(*,*)'xnn ',xintnn(i)
+               enddo
+c               stop
+cc we now replicate for y displacement of k
+cc  perturb xj + deltaxj
+cc  perturb yk + deltayk
+               do ij=1,ncoord
+                  xintpp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpp(ik)=coox(ik)
+                  cooypp(ik)=cooy(ik)
+                  coozpp(ik)=cooz(ik)
+               enddo
+               cooxpp(jaind)=cooxpp(jaind)+deltax
+               cooypp(kaind)=cooypp(kaind)+deltay
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpp,cooypp,
+     $     coozpp,xintpp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb xj - deltaxj
+cc  perturb yk + deltayk
+               do ij=1,ncoord
+                  xintnp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnp(ik)=coox(ik)
+                  cooynp(ik)=cooy(ik)
+                  cooznp(ik)=cooz(ik)
+               enddo
+               cooxnp(jaind)=cooxnp(jaind)-deltax
+               cooynp(kaind)=cooynp(kaind)+deltay
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnp,cooynp,
+     $     cooznp,xintnp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb xj + deltaxj
+cc  perturb yk - deltayk
+               do ij=1,ncoord
+                  xintpn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpn(ik)=coox(ik)
+                  cooypn(ik)=cooy(ik)
+                  coozpn(ik)=cooz(ik)
+               enddo
+               cooxpn(jaind)=cooxpn(jaind)+deltax
+               cooypn(kaind)=cooypn(kaind)-deltay
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpn,cooypn,
+     $     coozpn,xintpn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb xj - deltaxj
+cc  perturb yk - deltayk
+               do ij=1,ncoord
+                  xintnn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnn(ik)=coox(ik)
+                  cooynn(ik)=cooy(ik)
+                  cooznn(ik)=cooz(ik)
+               enddo
+               cooxnn(jaind)=cooxnn(jaind)-deltax
+               cooynn(kaind)=cooynn(kaind)-deltay
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnn,cooynn,
+     $     cooznn,xintnn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc we can now compute the second of nine components of the Cmatrix
+               kind=kind+1
+               do i=1,ncoord
+                  if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                     if(xintnp(i).lt.0)then
+                        xintnp(i)=xintnp(i)+360.
+                     else if(xintnp(i).gt.0)then
+                        xintnp(i)=xintnp(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                     if(xintpn(i).lt.0)then
+                        xintpn(i)=xintpn(i)+360.
+                     else if(xintpn(i).gt.0)then
+                        xintpn(i)=xintpn(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                     if(xintnn(i).lt.0)then
+                        xintnn(i)=xintnn(i)+360.
+                     else if(xintnn(i).gt.0)then
+                        xintnn(i)=xintnn(i)-360.
+                     endif
+                     if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+c                  if(jind.eq.kind)then
+c                     cmat(i,jind,kind)=(xintpp(i)-2*xint(i)+
+c     $                    xintnn(i))/4./deltax/deltay
+c                  else
+                     cmat(i,jind,kind)=(xintpp(i)-xintnp(i)-xintpn(i)+
+     $                    xintnn(i))/4./deltax/deltay
+c                  endif
+               enddo
+
+cc we now replicate for z displacement of k
+cc  perturb xj + deltaxj
+cc  perturb zk + deltazk
+               do ij=1,ncoord
+                  xintpp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpp(ik)=coox(ik)
+                  cooypp(ik)=cooy(ik)
+                  coozpp(ik)=cooz(ik)
+               enddo
+               cooxpp(jaind)=cooxpp(jaind)+deltax
+               coozpp(kaind)=coozpp(kaind)+deltaz
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpp,cooypp,
+     $     coozpp,xintpp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb xj - deltaxj
+cc  perturb zk + deltazk
+               do ij=1,ncoord
+                  xintnp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnp(ik)=coox(ik)
+                  cooynp(ik)=cooy(ik)
+                  cooznp(ik)=cooz(ik)
+               enddo
+               cooxnp(jaind)=cooxnp(jaind)-deltax
+               cooznp(kaind)=cooznp(kaind)+deltaz
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnp,cooynp,
+     $     cooznp,xintnp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb xj + deltaxj
+cc  perturb zk - deltazk
+               do ij=1,ncoord
+                  xintpn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpn(ik)=coox(ik)
+                  cooypn(ik)=cooy(ik)
+                  coozpn(ik)=cooz(ik)
+               enddo
+               cooxpn(jaind)=cooxpn(jaind)+deltax
+               coozpn(kaind)=coozpn(kaind)-deltaz
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpn,cooypn,
+     $     coozpn,xintpn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb xj - deltaxj
+cc  perturb zk - deltazk
+               do ij=1,ncoord
+                  xintnn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnn(ik)=coox(ik)
+                  cooynn(ik)=cooy(ik)
+                  cooznn(ik)=cooz(ik)
+               enddo
+               cooxnn(jaind)=cooxnn(jaind)-deltax
+               cooznn(kaind)=cooznn(kaind)-deltaz
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnn,cooynn,
+     $     cooznn,xintnn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc we can now compute the third of nine components of the Cmatrix
+               kind=kind+1
+               do i=1,ncoord
+                  if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                     if(xintnp(i).lt.0)then
+                        xintnp(i)=xintnp(i)+360.
+                     else if(xintnp(i).gt.0)then
+                        xintnp(i)=xintnp(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                     if(xintpn(i).lt.0)then
+                        xintpn(i)=xintpn(i)+360.
+                     else if(xintpn(i).gt.0)then
+                        xintpn(i)=xintpn(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                     if(xintnn(i).lt.0)then
+                        xintnn(i)=xintnn(i)+360.
+                     else if(xintnn(i).gt.0)then
+                        xintnn(i)=xintnn(i)-360.
+                     endif
+                     if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+c                  if(jind.eq.kind)then
+c                     cmat(i,jind,kind)=(xintpp(i)-2*xint(i)+
+c     $                    xintnn(i))/4./deltax/deltaz
+c                  else
+                     cmat(i,jind,kind)=(xintpp(i)-xintnp(i)-xintpn(i)+
+     $                    xintnn(i))/4./deltax/deltaz
+c                  endif
+               enddo
+            endif
+            enddo
+c*******************************************************************
+cc perturb yj
+            jind=jind+1
+            kind=0
+            kaind=0
+            do k=1,natomt
+            if(idummy(k).ne.1)then
+               kaind=kaind+1
+cc  perturb yj + deltayj
+cc  perturb xk + deltaxk
+               do ij=1,ncoord
+                  xintpp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpp(ik)=coox(ik)
+                  cooypp(ik)=cooy(ik)
+                  coozpp(ik)=cooz(ik)
+               enddo
+               cooypp(jaind)=cooypp(jaind)+deltay
+               cooxpp(kaind)=cooxpp(kaind)+deltax
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpp,cooypp,
+     $     coozpp,xintpp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb yj - deltayj
+cc  perturb xk + deltaxk
+               do ij=1,ncoord
+                  xintnp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnp(ik)=coox(ik)
+                  cooynp(ik)=cooy(ik)
+                  cooznp(ik)=cooz(ik)
+               enddo
+               cooynp(jaind)=cooynp(jaind)-deltay
+               cooxnp(kaind)=cooxnp(kaind)+deltax
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnp,cooynp,
+     $     cooznp,xintnp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb yj + deltayj
+cc  perturb xk - deltaxk
+               do ij=1,ncoord
+                  xintpn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpn(ik)=coox(ik)
+                  cooypn(ik)=cooy(ik)
+                  coozpn(ik)=cooz(ik)
+               enddo
+               cooypn(jaind)=cooypn(jaind)+deltay
+               cooxpn(kaind)=cooxpn(kaind)-deltax
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpn,cooypn,
+     $     coozpn,xintpn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb yj - deltayj
+cc  perturb xk - deltaxk
+               do ij=1,ncoord
+                  xintnn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnn(ik)=coox(ik)
+                  cooynn(ik)=cooy(ik)
+                  cooznn(ik)=cooz(ik)
+               enddo
+               cooynn(jaind)=cooynn(jaind)-deltay
+               cooxnn(kaind)=cooxnn(kaind)-deltax
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnn,cooynn,
+     $     cooznn,xintnn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+
+cc we can now compute the fourth of nine components of the Cmatrix
+               kind=kind+1
+               do i=1,ncoord
+                  if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                     if(xintnp(i).lt.0)then
+                        xintnp(i)=xintnp(i)+360.
+                     else if(xintnp(i).gt.0)then
+                        xintnp(i)=xintnp(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                     if(xintpn(i).lt.0)then
+                        xintpn(i)=xintpn(i)+360.
+                     else if(xintpn(i).gt.0)then
+                        xintpn(i)=xintpn(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                     if(xintnn(i).lt.0)then
+                        xintnn(i)=xintnn(i)+360.
+                     else if(xintnn(i).gt.0)then
+                        xintnn(i)=xintnn(i)-360.
+                     endif
+                     if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+c                  if(jind.eq.kind)then
+c                     cmat(i,jind,kind)=(xintpp(i)-2*xint(i)+
+c     $                    xintnn(i))/4./deltay/deltax
+c                  else
+                     cmat(i,jind,kind)=(xintpp(i)-xintnp(i)-xintpn(i)+
+     $                    xintnn(i))/4./deltay/deltax
+c                  endif
+               enddo
+
+cc we now replicate for y displacement of k
+cc  perturb yj + deltayj
+cc  perturb yk + deltayk
+               do ij=1,ncoord
+                  xintpp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpp(ik)=coox(ik)
+                  cooypp(ik)=cooy(ik)
+                  coozpp(ik)=cooz(ik)
+               enddo
+               cooypp(jaind)=cooypp(jaind)+deltay
+               cooypp(kaind)=cooypp(kaind)+deltay
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpp,cooypp,
+     $     coozpp,xintpp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb yj - deltayj
+cc  perturb yk + deltayk
+               do ij=1,ncoord
+                  xintnp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnp(ik)=coox(ik)
+                  cooynp(ik)=cooy(ik)
+                  cooznp(ik)=cooz(ik)
+               enddo
+               cooynp(jaind)=cooynp(jaind)-deltay
+               cooynp(kaind)=cooynp(kaind)+deltay
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnp,cooynp,
+     $     cooznp,xintnp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb yj + deltayj
+cc  perturb yk - deltayk
+               do ij=1,ncoord
+                  xintpn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpn(ik)=coox(ik)
+                  cooypn(ik)=cooy(ik)
+                  coozpn(ik)=cooz(ik)
+               enddo
+               cooypn(jaind)=cooypn(jaind)+deltay
+               cooypn(kaind)=cooypn(kaind)-deltay
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpn,cooypn,
+     $     coozpn,xintpn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb yj - deltayj
+cc  perturb yk - deltayk
+               do ij=1,ncoord
+                  xintnn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnn(ik)=coox(ik)
+                  cooynn(ik)=cooy(ik)
+                  cooznn(ik)=cooz(ik)
+               enddo
+               cooynn(jaind)=cooynn(jaind)-deltay
+               cooynn(kaind)=cooynn(kaind)-deltay
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnn,cooynn,
+     $     cooznn,xintnn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc we can now compute the fifth of nine components of the Cmatrix
+               kind=kind+1
+               do i=1,ncoord
+                  if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                     if(xintnp(i).lt.0)then
+                        xintnp(i)=xintnp(i)+360.
+                     else if(xintnp(i).gt.0)then
+                        xintnp(i)=xintnp(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                     if(xintpn(i).lt.0)then
+                        xintpn(i)=xintpn(i)+360.
+                     else if(xintpn(i).gt.0)then
+                        xintpn(i)=xintpn(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                     if(xintnn(i).lt.0)then
+                        xintnn(i)=xintnn(i)+360.
+                     else if(xintnn(i).gt.0)then
+                        xintnn(i)=xintnn(i)-360.
+                     endif
+                     if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+c                  if(jind.eq.kind)then
+c                     cmat(i,jind,kind)=(xintpp(i)-2*xint(i)+
+c     $                    xintnn(i))/4./deltay/deltay
+c                  else
+                     cmat(i,jind,kind)=(xintpp(i)-xintnp(i)-xintpn(i)+
+     $                    xintnn(i))/4./deltay/deltay
+c                  endif
+               enddo
+
+cc we now replicate for z displacement of k
+cc  perturb yj + deltayj
+cc  perturb zk + deltazk
+               do ij=1,ncoord
+                  xintpp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpp(ik)=coox(ik)
+                  cooypp(ik)=cooy(ik)
+                  coozpp(ik)=cooz(ik)
+               enddo
+               cooypp(jaind)=cooypp(jaind)+deltay
+               coozpp(kaind)=coozpp(kaind)+deltaz
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpp,cooypp,
+     $     coozpp,xintpp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb yj - deltayj
+cc  perturb zk + deltazk
+               do ij=1,ncoord
+                  xintnp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnp(ik)=coox(ik)
+                  cooynp(ik)=cooy(ik)
+                  cooznp(ik)=cooz(ik)
+               enddo
+               cooynp(jaind)=cooynp(jaind)-deltay
+               cooznp(kaind)=cooznp(kaind)+deltaz
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnp,cooynp,
+     $     cooznp,xintnp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb yj + deltayj
+cc  perturb zk - deltazk
+               do ij=1,ncoord
+                  xintpn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpn(ik)=coox(ik)
+                  cooypn(ik)=cooy(ik)
+                  coozpn(ik)=cooz(ik)
+               enddo
+               cooypn(jaind)=cooypn(jaind)+deltay
+               coozpn(kaind)=coozpn(kaind)-deltaz
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpn,cooypn,
+     $     coozpn,xintpn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb yj - deltayj
+cc  perturb zk - deltazk
+               do ij=1,ncoord
+                  xintnn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnn(ik)=coox(ik)
+                  cooynn(ik)=cooy(ik)
+                  cooznn(ik)=cooz(ik)
+               enddo
+               cooynn(jaind)=cooynn(jaind)-deltay
+               cooznn(kaind)=cooznn(kaind)-deltaz
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnn,cooynn,
+     $     cooznn,xintnn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc we can now compute the sixth of nine components of the Cmatrix
+               kind=kind+1
+               do i=1,ncoord
+                  if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                     if(xintnp(i).lt.0)then
+                        xintnp(i)=xintnp(i)+360.
+                     else if(xintnp(i).gt.0)then
+                        xintnp(i)=xintnp(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                     if(xintpn(i).lt.0)then
+                        xintpn(i)=xintpn(i)+360.
+                     else if(xintpn(i).gt.0)then
+                        xintpn(i)=xintpn(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                     if(xintnn(i).lt.0)then
+                        xintnn(i)=xintnn(i)+360.
+                     else if(xintnn(i).gt.0)then
+                        xintnn(i)=xintnn(i)-360.
+                     endif
+                     if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+c                  if(jind.eq.kind)then
+c                     cmat(i,jind,kind)=(xintpp(i)-2*xint(i)+
+c     $                    xintnn(i))/4./deltay/deltaz
+c                  else
+                     cmat(i,jind,kind)=(xintpp(i)-xintnp(i)-xintpn(i)+
+     $                    xintnn(i))/4./deltay/deltaz
+c                  endif
+               enddo
+            endif
+            enddo
+
+c*******************************************************************
+cc perturb zj
+            jind=jind+1
+            kind=0
+            kaind=0
+            do k=1,natomt
+            if(idummy(k).ne.1)then
+               kaind=kaind+1
+cc  perturb zj + deltazj
+cc  perturb xk + deltaxk
+               do ij=1,ncoord
+                  xintpp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpp(ik)=coox(ik)
+                  cooypp(ik)=cooy(ik)
+                  coozpp(ik)=cooz(ik)
+               enddo
+               coozpp(jaind)=coozpp(jaind)+deltaz
+               cooxpp(kaind)=cooxpp(kaind)+deltax
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpp,cooypp,
+     $     coozpp,xintpp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb zj - deltazj
+cc  perturb xk + deltaxk
+               do ij=1,ncoord
+                  xintnp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnp(ik)=coox(ik)
+                  cooynp(ik)=cooy(ik)
+                  cooznp(ik)=cooz(ik)
+               enddo
+               cooznp(jaind)=cooznp(jaind)-deltaz
+               cooxnp(kaind)=cooxnp(kaind)+deltax
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnp,cooynp,
+     $     cooznp,xintnp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb zj + deltazj
+cc  perturb xk - deltaxk
+               do ij=1,ncoord
+                  xintpn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpn(ik)=coox(ik)
+                  cooypn(ik)=cooy(ik)
+                  coozpn(ik)=cooz(ik)
+               enddo
+               coozpn(jaind)=coozpn(jaind)+deltaz
+               cooxpn(kaind)=cooxpn(kaind)-deltax
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpn,cooypn,
+     $     coozpn,xintpn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb zj - deltazj
+cc  perturb xk - deltaxk
+               do ij=1,ncoord
+                  xintnn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnn(ik)=coox(ik)
+                  cooynn(ik)=cooy(ik)
+                  cooznn(ik)=cooz(ik)
+               enddo
+               cooznn(jaind)=cooznn(jaind)-deltaz
+               cooxnn(kaind)=cooxnn(kaind)-deltax
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnn,cooynn,
+     $     cooznn,xintnn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+
+cc we can now compute the seventh of nine components of the Cmatrix
+               kind=kind+1
+               do i=1,ncoord
+                  if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                     if(xintnp(i).lt.0)then
+                        xintnp(i)=xintnp(i)+360.
+                     else if(xintnp(i).gt.0)then
+                        xintnp(i)=xintnp(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                     if(xintpn(i).lt.0)then
+                        xintpn(i)=xintpn(i)+360.
+                     else if(xintpn(i).gt.0)then
+                        xintpn(i)=xintpn(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                     if(xintnn(i).lt.0)then
+                        xintnn(i)=xintnn(i)+360.
+                     else if(xintnn(i).gt.0)then
+                        xintnn(i)=xintnn(i)-360.
+                     endif
+                     if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+c                  if(jind.eq.kind)then
+c                     cmat(i,jind,kind)=(xintpp(i)-2*xint(i)+
+c     $                    xintnn(i))/4./deltaz/deltax
+c                  else
+                     cmat(i,jind,kind)=(xintpp(i)-xintnp(i)-xintpn(i)+
+     $                    xintnn(i))/4./deltaz/deltax
+c                  endif
+               enddo
+
+cc we now replicate for y displacement of k
+cc  perturb zj + deltazj
+cc  perturb yk + deltayk
+               do ij=1,ncoord
+                  xintpp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpp(ik)=coox(ik)
+                  cooypp(ik)=cooy(ik)
+                  coozpp(ik)=cooz(ik)
+               enddo
+               coozpp(jaind)=coozpp(jaind)+deltaz
+               cooypp(kaind)=cooypp(kaind)+deltay
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpp,cooypp,
+     $     coozpp,xintpp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb zj - deltazj
+cc  perturb yk + deltayk
+               do ij=1,ncoord
+                  xintnp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnp(ik)=coox(ik)
+                  cooynp(ik)=cooy(ik)
+                  cooznp(ik)=cooz(ik)
+               enddo
+               cooznp(jaind)=cooznp(jaind)-deltaz
+               cooynp(kaind)=cooynp(kaind)+deltay
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnp,cooynp,
+     $     cooznp,xintnp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb zj + deltazj
+cc  perturb yk - deltayk
+               do ij=1,ncoord
+                  xintpn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpn(ik)=coox(ik)
+                  cooypn(ik)=cooy(ik)
+                  coozpn(ik)=cooz(ik)
+               enddo
+               coozpn(jaind)=coozpn(jaind)+deltaz
+               cooypn(kaind)=cooypn(kaind)-deltay
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpn,cooypn,
+     $     coozpn,xintpn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb zj - deltazj
+cc  perturb yk - deltayk
+               do ij=1,ncoord
+                  xintnn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnn(ik)=coox(ik)
+                  cooynn(ik)=cooy(ik)
+                  cooznn(ik)=cooz(ik)
+               enddo
+               cooznn(jaind)=cooznn(jaind)-deltaz
+               cooynn(kaind)=cooynn(kaind)-deltay
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnn,cooynn,
+     $     cooznn,xintnn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc we can now compute the eigth of nine components of the Cmatrix
+               kind=kind+1
+               do i=1,ncoord
+                  if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                     if(xintnp(i).lt.0)then
+                        xintnp(i)=xintnp(i)+360.
+                     else if(xintnp(i).gt.0)then
+                        xintnp(i)=xintnp(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                     if(xintpn(i).lt.0)then
+                        xintpn(i)=xintpn(i)+360.
+                     else if(xintpn(i).gt.0)then
+                        xintpn(i)=xintpn(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                     if(xintnn(i).lt.0)then
+                        xintnn(i)=xintnn(i)+360.
+                     else if(xintnn(i).gt.0)then
+                        xintnn(i)=xintnn(i)-360.
+                     endif
+                     if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+c                  if(jind.eq.kind)then
+c                     cmat(i,jind,kind)=(xintpp(i)-2*xint(i)+
+c     $                    xintnn(i))/4./deltaz/deltay
+c                  else
+                     cmat(i,jind,kind)=(xintpp(i)-xintnp(i)-xintpn(i)+
+     $                    xintnn(i))/4./deltaz/deltay
+c                  endif
+               enddo
+
+cc we now replicate for z displacement of k
+cc  perturb zj + deltazj
+cc  perturb zk + deltazk
+               do ij=1,ncoord
+                  xintpp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpp(ik)=coox(ik)
+                  cooypp(ik)=cooy(ik)
+                  coozpp(ik)=cooz(ik)
+               enddo
+               coozpp(jaind)=coozpp(jaind)+deltaz
+               coozpp(kaind)=coozpp(kaind)+deltaz
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpp,cooypp,
+     $     coozpp,xintpp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb zj - deltazj
+cc  perturb zk + deltazk
+               do ij=1,ncoord
+                  xintnp(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnp(ik)=coox(ik)
+                  cooynp(ik)=cooy(ik)
+                  cooznp(ik)=cooz(ik)
+               enddo
+               cooznp(jaind)=cooznp(jaind)-deltaz
+               cooznp(kaind)=cooznp(kaind)+deltaz
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnp,cooynp,
+     $     cooznp,xintnp,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb zj + deltazj
+cc  perturb zk - deltazk
+               do ij=1,ncoord
+                  xintpn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxpn(ik)=coox(ik)
+                  cooypn(ik)=cooy(ik)
+                  coozpn(ik)=cooz(ik)
+               enddo
+               coozpn(jaind)=coozpn(jaind)+deltaz
+               coozpn(kaind)=coozpn(kaind)-deltaz
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxpn,cooypn,
+     $     coozpn,xintpn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc  perturb zj - deltazj
+cc  perturb zk - deltazk
+               do ij=1,ncoord
+                  xintnn(ij)=0.
+               enddo
+               do ik=1,natom
+                  cooxnn(ik)=coox(ik)
+                  cooynn(ik)=cooy(ik)
+                  cooznn(ik)=cooz(ik)
+               enddo
+               cooznn(jaind)=cooznn(jaind)-deltaz
+               cooznn(kaind)=cooznn(kaind)-deltaz
+               call update_zmat(natom,natomt,intcoor,bislab,ibconn,
+     $     iaconn,idconn,bname,anname,dname,atname,cooxnn,cooynn,
+     $     cooznn,xintnn,tauopt,ntau,idummy,ilin_fr,aconnt,bconnt,
+     $     dconnt,atomlabel,ifilu)
+cc we can now compute the ninth of nine components of the Cmatrix
+               kind=kind+1
+               do i=1,ncoord
+                  if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                     if(xintnp(i).lt.0)then
+                        xintnp(i)=xintnp(i)+360.
+                     else if(xintnp(i).gt.0)then
+                        xintnp(i)=xintnp(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintnp(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                     if(xintpn(i).lt.0)then
+                        xintpn(i)=xintpn(i)+360.
+                     else if(xintpn(i).gt.0)then
+                        xintpn(i)=xintpn(i)-360.
+                     endif
+                     if(abs(xintpp(i)-xintpn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+                  if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                     if(xintnn(i).lt.0)then
+                        xintnn(i)=xintnn(i)+360.
+                     else if(xintnn(i).gt.0)then
+                        xintnn(i)=xintnn(i)-360.
+                     endif
+                     if(abs(xintnp(i)-xintnn(i)).gt.300)then
+                        write(*,*)'something did not work here'
+                        write(*,*)'kind= ',kind
+                        write(*,*)'jind= ',jind
+                        write(*,*)'intocoor= ',i
+                        stop
+                     endif
+                  endif
+c                  if(jind.eq.kind)then
+c                     cmat(i,jind,kind)=(xintpp(i)-2*xint(i)+
+c     $                    xintnn(i))/4./deltaz/deltaz
+c                  else
+                     cmat(i,jind,kind)=(xintpp(i)-xintnp(i)-xintpn(i)+
+     $                    xintnn(i))/4./deltaz/deltaz
+c                  endif
+               enddo
+            endif
+            enddo
+         endif
+         write(*,*)'jind is ',jind
+      enddo
+      write(*,*)'kind is ',kind
+      write(*,*)'jind is ',jind
+
+      do k=1,ncoord
+         do j=1,3*natom
+            do i=1,3*natom
+               if(iangind(k).eq.1)cmat(k,j,i)=cmat(k,j,i)/180.*pigr
+            enddo
+         enddo
+      enddo
+
+
+      open(unit=20,file='cmat.dat',status='unknown')
+      write(20,*)ncoord,3*natom
+      do i=1,ncoord
+      write(20,*)i
+         do j=1,3*natom
+            write(20,105)(cmat(i,j,k),k=1,3*natom)
+         enddo
+      write(20,*)
+      enddo
+      close(20)
+
+      if(ifile.eq.0)then
+         open (unit=99,status='unknown')
+         rewind (99)
+         write (99,103) nameoutc
+         rewind (99)
+         read (99,104) command1
+         close(99)
+         call commrun(command1)         
+      endif
+ 103  format ('cp -f cmat.dat output/'A8,'.dat')
+ 104  format (A100)
+ 105  format (10000(1X,1PE11.4))
+
+      return
+      end
