@@ -14,7 +14,6 @@ add_library(estoktp
     ${PROJECT_SOURCE_DIR}/src/estoktp/LineRead.f
     ${PROJECT_SOURCE_DIR}/src/estoktp/croutines.c
     ${PROJECT_SOURCE_DIR}/src/estoktp/mt.c
-    ${PROJECT_SOURCE_DIR}/src/estoktp/dihedral.c
     ${PROJECT_SOURCE_DIR}/src/estoktp/molprofopt.f
     ${PROJECT_SOURCE_DIR}/src/estoktp/zmat_routines.f)
 
