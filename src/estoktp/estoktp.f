@@ -13078,6 +13078,11 @@ c      stop
       do inumpoints=1,numpointstot
          nfreqtest=3*natom-6-1-nhind
          nfreqw=0
+         nfreqwxyz=0
+         intfreqw=0
+         if(intfreq.eq.1)then
+            intfreqw=1
+         endif
          if(intfreq.eq.0)then
             do j=1,nfreq
                if(freqproj(j,inumpoints).ne.0)then
@@ -13090,8 +13095,14 @@ c      stop
                   nfreqw=nfreqw+1
                endif
             enddo
+            do j=1,nfreq
+               if(freqproj(j,inumpoints).ne.0)then
+                  nfreqwxyz=nfreqwxyz+1
+               endif
+            enddo
          endif
          if(nfreqw.ne.nfreqtest) goto 9999
+         if(nfreqwxyz.ne.nfreqtest) intfreqw=0
 
          write(107,*)'RRHO            !  ',inumpoints
          write(107,*)'Geometry[angstrom] ',natom
@@ -13103,8 +13114,7 @@ c      stop
             write(107,*)'          SymmetryFactor ',symf
             write(107,*)'End'
          endif
-
-         if(intfreq.eq.1)then
+         if(intfreqw.eq.1)then
             write(109,*)'RRHO            !  ',inumpoints
             write(109,*)'Geometry[angstrom] ',natom
             do j=1,natom
@@ -13130,23 +13140,23 @@ c      stop
                do ij=1,24
                   read(108,'(A70)')rot2dline
                   write(107,*)rot2dline
-                  if(intfreq.eq.1) write(109,*)rot2dline
+                  if(intfreqw.eq.1) write(109,*)rot2dline
                enddo
             enddo
             nhind_res=nhind-2*nhindmd
             do ir=1,nhind_res
                read(108,'(A60)')rotline
                write(107,*)rotline
-               if(intfreq.eq.1) write(109,*)rotline
+               if(intfreqw.eq.1) write(109,*)rotline
                read(108,'(A60)')rotline
                write(107,*)rotline
-               if(intfreq.eq.1) write(109,*)rotline
+               if(intfreqw.eq.1) write(109,*)rotline
                read(108,'(A60)')rotline
                write(107,*)rotline
-               if(intfreq.eq.1) write(109,*)rotline
+               if(intfreqw.eq.1) write(109,*)rotline
                read(108,'(A60)')rotline
                write(107,*)rotline
-               if(intfreq.eq.1) write(109,*)rotline
+               if(intfreqw.eq.1) write(109,*)rotline
                call LineRead(108)
                open (unit=99,status='unknown')
                rewind (99)
@@ -13154,8 +13164,8 @@ c      stop
                rewind(99)
                read(99,*)numpot
                close(99)
-               write(107,*)' Potential[kcal/mol] ',numpot 
-             if(intfreq.eq.1)write(109,*)' Potential[kcal/mol] ',numpot 
+             write(107,*)' Potential[kcal/mol] ',numpot 
+             if(intfreqw.eq.1)write(109,*)' Potential[kcal/mol] ',numpot 
                read(108,*)(rotpot(j),j=1,numpot)
                if(hr_rescale.eq.'HRCC') then
                   do j=1,numpot
@@ -13163,10 +13173,10 @@ c      stop
                  enddo
                endif
                write(107,1111)(rotpot(j),j=1,numpot)
-               if(intfreq.eq.1)write(109,1111)(rotpot(j),j=1,numpot)
+               if(intfreqw.eq.1)write(109,1111)(rotpot(j),j=1,numpot)
                read(108,'(A60)')rotline
                write(107,*)rotline
-               if(intfreq.eq.1) write(109,*)rotmore hrline
+               if(intfreqw.eq.1) write(109,*)rotmore hrline
             enddo
             close(108)
          endif
@@ -13191,12 +13201,14 @@ cc are set to zero
             enddo
          endif
          write(107,*)'    Frequencies[1/cm] ',nfreqw
-         if(intfreq.eq.1) write(109,*)'    Frequencies[1/cm] ',nfreqw
+         if(intfreqw.eq.1) write(109,*)'    Frequencies[1/cm] ',nfreqw
          if(intfreq.eq.0)then
-            write(107,8010) (freqproj(j,inumpoints),j=1,nfreqw)
+            write(107,8010) (freqproj(j,inumpoints),j=1,nfreqw)            
          else
             write(107,8010) (freqintproj(j,inumpoints),j=1,nfreqw)
-            write(109,8010) (freqproj(j,inumpoints),j=1,nfreqw)
+            if(intfreqw.eq.1)then
+               write(109,8010) (freqproj(j,inumpoints),j=1,nfreqw)
+            endif
          endif
          write(107,*)'ZeroEnergy[kcal/mol] ',rc_ene_kcal(inumpoints)
          write (107,*) ' ElectronicLevels[1/cm]           ',nelec
@@ -13205,7 +13217,7 @@ cc are set to zero
          enddo
          write(107,*)'End'
          write(107,*)'!*********************************************'
-         if(intfreq.eq.1)then
+         if(intfreqw.eq.1)then
             write(109,*)'ZeroEnergy[kcal/mol] ',rc_ene_kcal(inumpoints)
             write (109,*) ' ElectronicLevels[1/cm]           ',nelec
             do ielec = 1, nelec
@@ -13242,7 +13254,7 @@ cc are set to zero
             write(107,*)'   ImaginaryFrequency[1/cm]   ',freq_imag
             write(107,*)'   File imactint.dat'
          endif
-         if(intfreq.eq.1) then
+         if(intfreqw.eq.1) then
             if(imdtunn.ne.1) then
                write(109,*)'      Tunneling    Eckart'
                write(109,*)'      ImaginaryFrequency[1/cm] ',freq_imag
@@ -13257,7 +13269,7 @@ cc are set to zero
          endif
       endif
       write(107,*)'End '
-      if(intfreq.eq.1) write(109,*)'End '
+      if(intfreqw.eq.1) write(109,*)'End '
 
 c      write(107,*)'End '
 c      write(107,*)'End '
@@ -14662,8 +14674,14 @@ cc now save the TS or variational input as blocks
 
       command1='echo End > temp211.me'
       call commrun(command1)
-      command1='cat temp21.me temp211.me > temp21a.me'
-      call commrun(command1)
+
+      if(ivar.eq.1)then
+         command1='cat temp21.me temp211.me > temp21a.me'
+         call commrun(command1)
+      else if(ivar.eq.0)then
+         command1='cp -f temp21.me temp21a.me'
+         call commrun(command1)
+      endif
 
       if(ivar.eq.0) then
          rewind (99)
@@ -14671,8 +14689,8 @@ cc now save the TS or variational input as blocks
          rewind (99)
          read (99,1120) command1
          call commrun(command1)
- 1003    format(" sed -ie 's/Barrier TS REACS WR/
-     +    Barrier TS0/g' temp21a.me")
+ 1003    format(" sed -ie 's/Barrier TS REACS WR/Barrier TS0/g'
+     +    temp21a.me")
          rewind (99)
 c         write(99,2003)ts_en_au
          write(99,2003)ts_en
@@ -14699,8 +14717,8 @@ cc save au value of maximum of variational energy
          rewind (99)
          read (99,1120) command1
          call commrun(command1)
- 1005    format(" sed -ie 's/Barrier TS REACS WR/
-     +   Barrier VARIATIONAL/g' temp21a.me")
+ 1005    format(" sed -ie 's/Barrier TS REACS WR/Barrier VARIATIONAL/g'
+     +    temp21a.me")
          command1='cp -f temp21a.me ./me_blocks/variational.me'
          call commrun(command1)
       endif
@@ -15541,23 +15559,23 @@ cccccccccccccccccccccc
             rewind (99)
             read (99,1120) command1
             call commrun(command1)
- 1025       format(" sed -ie 's/Barrier TS REACS WR/
-     +   Barrier TS REACS WP/g' temp3.me")
+1025  format(" sed -ie 's/Barrier TS REACS WR/ Barrier TS REACS WP/g'
+     +   temp3.me")
             rewind (99)
             write (99,1925) 
             rewind (99)
             read (99,1120) command1
             call commrun(command1)
- 1925       format(" sed -ie 's/Barrier B2 WR WP/
-     +   Barrier TS REACS WP/g' temp3.me")
+1925    format(" sed -ie 's/Barrier B2 WR WP/Barrier TS REACS WP/g'
+     +    temp3.me")
             if(ip1.eq.1.and.ip2.eq.1)then
                rewind (99)
                write (99,1125) 
                rewind (99)
                read (99,1120) command1
-               call commrun(command1)
- 1125          format(" sed -ie 's/Barrier TS REACS WP/
-     +   Barrier TS REACS PRODS/g' temp3.me")
+               call commrun(command1) 
+1125  format(" sed -ie 's/Barrier TS REACS WP/Barrier TS REACS PRODS/g'
+     +    temp3.me")
             endif
          else if (nts.eq.2) then
             rewind (99)
@@ -15571,10 +15589,10 @@ cccccccccccccccccccccc
                rewind (99)
                read (99,1120) command1
                call commrun(command1)
- 1225       format(" sed -ie 's/Barrier TS REACS WR/
-     +   Barrier B2 WR PRODS/g' temp3.me")
- 1325       format(" sed -ie 's/Barrier B2 WR WP/
-     +   Barrier B2 WR PRODS/g' temp3.me")
+1225   format(" sed -ie 's/Barrier TS REACS WR/Barrier B2 WR PRODS/g'
+     +   temp3.me")
+1325   format(" sed -ie 's/Barrier B2 WR WP/Barrier B2 WR PRODS/g'
+     +   temp3.me")
             else
                rewind (99)
                write (99,1026) 
@@ -15602,10 +15620,10 @@ cccccccccccccccccccccc
             rewind (99)
             read (99,1120) command1
             call commrun(command1)
- 3125       format(" sed -ie 's/Barrier TS REACS WP/
-     +   Barrier TS REACS WR/g' temp3.me")
- 3126          format(" sed -ie 's/Barrier B2 WR WP/
-     +   Barrier TS REACS WR/g' temp3.me")
+3125   format(" sed -ie 's/Barrier TS REACS WP/Barrier TS REACS WR/g'
+     +   temp3.me")
+3126   format(" sed -ie 's/Barrier B2 WR WP/Barrier TS REACS WR/g'
+     +   temp3.me")
          else if (nts.eq.2) then
             rewind (99)
             if(ip1.eq.1.and.ip2.eq.1)then
@@ -15637,10 +15655,10 @@ cccccccccccccccccccccc
             rewind (99)
             read (99,1120) command1
             call commrun(command1)
- 1026       format(" sed -ie 's/Barrier TS REACS WP/
-     +   Barrier B2 WR WP/g' temp3.me")
- 1027       format(" sed -ie 's/Barrier TS REACS WR/
-     +   Barrier B2 WR PRODS/g' temp3.me")
+1026  format(" sed -ie 's/Barrier TS REACS WP/Barrier B2 WR WP/g'
+     +    temp3.me")
+1027  format(" sed -ie 's/Barrier TS REACS WR/Barrier B2 WR PRODS/g'
+     +   temp3.me")
          endif
       endif
 
