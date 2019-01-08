@@ -13,6 +13,7 @@ c MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
      $ ksited,bconnt,aconnt,dconnt)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -157,6 +158,7 @@ c ******************************************************
      $ ,ntau,idummy,ilin,aconnt,bconnt,dconnt,atomlabel,ifilu)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -183,7 +185,7 @@ c
       CHARACTER*160 line,sename,string,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
 
-      include 'filcomm.f'
+c      include 'filcomm.f'
 
 c      write(*,*)'ifile is ',1
 c      stop
@@ -762,6 +764,7 @@ cc returns coordinates of a given coords of b,c,d and ab distance, abc angle
 cc and abcd dihedral angle
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -771,7 +774,7 @@ c
       CHARACTER*160 line,sename,string,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
 
-      include 'filcomm.f'
+c      include 'filcomm.f'
 
 c this is a geometric approach for calculating the xyz coordinates of atom A
 c when the xyz coordinates of the B C and D are known and A position is defined with respect 
@@ -1013,6 +1016,7 @@ c************************************************************
       subroutine rototrasl(natom,coox,cooy,cooz,ilin)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -1027,7 +1031,7 @@ c
       CHARACTER*160 line,sename,string,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
 
-      include 'filcomm.f'
+c      include 'filcomm.f'
 
 
 cc performs traslation to center of axis
@@ -1194,6 +1198,7 @@ cc three atoms whose coordinates are known and from which the distances
 cc are known
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -1203,7 +1208,7 @@ c
       CHARACTER*160 line,sename,string,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
 
-      include 'filcomm.f'
+c      include 'filcomm.f'
 
 cc first check if reference atoms are co-linear:
 
@@ -1371,6 +1376,7 @@ c
 c returns dc given da,db and alfa
 c
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -1380,8 +1386,8 @@ c
       CHARACTER*160 line,sename,string,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
 
-      include 'filcomm.f'
-c      pi=3.14159265359
+c      include 'filcomm.f'
+      pi=3.14159265359
       alfa=pigr*alfa/180.
 
       da1=db*cos(pi-alfa)
@@ -1397,6 +1403,7 @@ c
 c returns alfa given da, db, dc
 c
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -1406,7 +1413,7 @@ c
       CHARACTER*160 line,sename,string,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
 
-      include 'filcomm.f'
+c      include 'filcomm.f'
 c      write(*,*)'da is',da
 c      write(*,*)'db is',db
 c      write(*,*)'dc is',dc
@@ -1424,6 +1431,7 @@ c************************************************************
      $ xd,yd,zd,ang,dihed)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -1437,7 +1445,7 @@ c
       CHARACTER*160 line,sename,string,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
 
-      include 'filcomm.f'
+c      include 'filcomm.f'
 
       xbt=xb-xa
       ybt=yb-ya

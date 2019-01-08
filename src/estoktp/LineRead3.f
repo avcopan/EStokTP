@@ -17,7 +17,8 @@ C     Comments begin with ! and may begin anywhere in a line.
 C     Comments following the keywords are detected and ignored.
 C     If end of file is detected LEOF is set to .TRUE.
 
-      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      implicit double precision(a-h,o-z)
+      implicit integer (i-n)
 
 
       logical leof,lsec,ltit

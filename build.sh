@@ -7,7 +7,7 @@ if [ "$(uname)" == "Darwin" ]; then
     echo "ERROR: Building with Mac OSX is currently unsupported" 1>&2
     exit 64
 elif [ "$(uname)" == "Linux" ]; then
-    cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_C_COMPILER=$CC -DCMAKE_Fortran_COMPILER=$FC -DBLAS_LIBRARIES=$PREFIX/lib/libblas.so -DCMAKE_Fortran_FLAGS="${FFLAGS}" -DCMAKE_C_FLAGS="${CFLAGS}"
+    cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_C_COMPILER=$CC -DCMAKE_Fortran_COMPILER=$FC -DCMAKE_Fortran_FLAGS="${DEBUG_FFLAGS}" -DCMAKE_C_FLAGS="${DEBUG_CFLAGS}"
 fi
 
 make VERBOSE=1

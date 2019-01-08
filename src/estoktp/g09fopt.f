@@ -15,6 +15,7 @@ c GNU General Public License for more details.
      $ atomlabel,intcoor,bislab,tauopt,xint,abcrot,ires,ixyz,ired)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -865,6 +866,7 @@ cc      if(ichecken.eq.0.and.gkeyword.ne.'level1')then
      $ grad,force_con,ifcread,rc_ene,rc_coord)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -1238,6 +1240,7 @@ cc now get energies along reaction coordinate
       subroutine en_key_g09(comline1,igkey,gkeyword,ispin)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       character*30 gkeyword,igkey
       character*70 comline1
@@ -1345,6 +1348,7 @@ cc now get energies along reaction coordinate
      $                         comline3,comline4)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       character*30 gkeyword,igkey
       character*70 comline1
@@ -1422,6 +1426,7 @@ c      stop
      +   comline6)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       character*30 gkeyword,igkey
       character*70 comline1

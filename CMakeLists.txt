@@ -1,13 +1,9 @@
 project(EStokTP C Fortran)
 cmake_minimum_required(VERSION 2.8)
-find_package(BLAS REQUIRED)
 find_package(Threads)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-leading-underscore -fno-stack-protector")
-set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fno-stack-protector")
 
-if(BLAS_FOUND)
-    message(STATUS "Found BLAS: ${BLAS_LIBRARIES}")
-endif()
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Wall -fno-leading-underscore")
+set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}")
 
 add_library(estoktp
     ${PROJECT_SOURCE_DIR}/src/estoktp/g09fopt.f
@@ -30,7 +26,7 @@ add_executable(estoktp.x
 add_executable(RPHt.exe
     ${PROJECT_SOURCE_DIR}/src/projRot/main.c)
 
-target_link_libraries(estoktp.x estoktp ${BLAS_LIBRARIES})
+target_link_libraries(estoktp.x estoktp)
 
 target_link_libraries(RPHt.exe projRot m)
 

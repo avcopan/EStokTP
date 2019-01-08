@@ -33,3 +33,7 @@
 
 # Swap files
 *~
+
+# local build directories
+debug/bin/
+debug/build/

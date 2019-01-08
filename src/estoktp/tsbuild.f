@@ -14,6 +14,7 @@ c
       program tsbuild
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -414,7 +415,8 @@ C     Comments begin with ! and may begin anywhere in a line.
 C     Comments following the keywords are detected and ignored.
 C     If end of file is detected LEOF is set to .TRUE.
 
-      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      implicit double precision(a-h,o-z)
+      implicit integer (i-n)
 
 
       logical leof,lsec,ltit
@@ -570,7 +572,8 @@ C     lower case letters in the string to upper case letters
 C     This function is a modified version of CASE which was written
 C     by Rozeanne Steckler
 
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       CHARACTER * 1 XLETT
 

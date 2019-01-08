@@ -51,6 +51,7 @@ c	for this will need to have some specificiation of additional torsional degrees
       program estoktp
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       LOGICAL leof,lsec,ltit
       CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
@@ -887,6 +888,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine tau_opt(ispecies)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -1681,6 +1683,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine grid_opt
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -2041,6 +2044,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine grid_opt_iso
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -2450,6 +2454,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine grid_opt_beta
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -2705,6 +2710,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine grid_opt_2d
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -3232,6 +3238,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine ts_0
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -3492,6 +3499,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine tauo_ts
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -4303,6 +4311,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine level1(ispecies)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -6025,6 +6034,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine onedtau(ispecies)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
 cc    this is the hindered rotor section
 
@@ -7771,6 +7781,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine mdtau(ispecies)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
 cc    this is the multi dimensional hindered rotor section
 
@@ -10876,6 +10887,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine symmetry(ispecies)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
 cc    this is the hindered rotor section
 
@@ -11579,6 +11591,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine irc
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -13325,6 +13338,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine hl(ispecies)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -14150,6 +14164,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine ktp
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -15760,6 +15775,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine modarr
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       open (unit=125,file='modarr.dat',status='old')
       open (unit=126,file='modarr.out',status='unknown')
@@ -15774,6 +15790,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      $ xinti,intcoor,natom1,natom2,natomt1,natomt2,ntau1,ntau2,bislab)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -16285,6 +16302,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      $ xinti,intcoor,natom1,natomt1,ntau1,iopt,dstart)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -16648,6 +16666,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      $ xinti,intcoor,natom1,natomt1,ntau1,iopt,dstart)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -16826,6 +16845,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine stoichiometry(filename,stoichname)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
@@ -17057,6 +17077,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine bmatrix(ispecies,ifile)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
