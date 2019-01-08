@@ -15,6 +15,7 @@ c GNU General Public License for more details.
      $ ,ispecies)
 
       implicit double precision (a-h,o-z)
+      implicit integer (i-n)
 
       include 'data_estoktp.fi'
       include 'param_estoktp.fi'
