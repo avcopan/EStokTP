@@ -66,7 +66,7 @@ int trimtemp_()
   fp=fopen(filename,"w");
   fprintf(fp,"%s=",buffer);
   fclose(fp);
-  return;
+  return 0;
 }
 
 

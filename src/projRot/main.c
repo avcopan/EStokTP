@@ -1669,7 +1669,7 @@ void read_VaG_mueff () {
 
   int i;
   char buffer[100];
-  char filename[20];
+  char filename[25];
   FILE *fp;
 
   sprintf(filename,"RPHt_step_en_mueff.dat");
@@ -4222,12 +4222,28 @@ void projector_matrix_Rot(int step){
 
   // now project FC matrix and calculate eigenvalues
 
+
   double **DmatrotT;
 
-  DmatrotT=(double **) calloc( (numrotors) , sizeof(double *) );
+
+  DmatrotT=(double **) malloc( (numrotors)*sizeof(double *) );
+  for(j=0; j < numrotors; j++) {
+    DmatrotT[j]= (double*) malloc( (3*ATOMS)*sizeof(double) );
+  }
+  
+  for(i=0; i < numrotors; i++) {
+    for(j=0; j < 3*ATOMS; j++) {
+      DmatrotT[i][j]=0.;
+    }
+  }
+
+
+  /*
+  DmatrotT=(double **) calloc( numrotors , sizeof(double *) );
   for(j=0; j < numrotors; j++) {
     DmatrotT[j]= (double*) calloc( 3*ATOMS, sizeof(double) );
   }
+  */
 
   DmatrotT=transpose_double(Dmatrot,numrotors,3*ATOMS,DmatrotT);
 

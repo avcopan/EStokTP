@@ -44,7 +44,8 @@ c     character*160 cname
 
       LOGICAL leof,lsec,ltit
 
-      CHARACTER*160 line,sename,string,word,word2,word3
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
       character*20 ct1,ct2,ct3
       character*20 bname(natommx),anname(natommx),dname(natommx)
@@ -59,7 +60,7 @@ c      common /itsdat/ iabs,iadd,ivar,isite,ji,ki
 c      common /strucword/ stoich
       include 'filcomm.f'
 
-111   continue
+c111   continue
 
 cccccccccccccc print out gaussian com file  ccccccccccccc
 c initialize word, word2, word3, word4, word5
@@ -526,7 +527,7 @@ c        write (6,*) 'g09test2',word,natom
 c        write (6,*) 'line2 test',line
 c        write (6,*) 'words test',word2,word3
          if (word2.eq.'NAME'.and.word3.eq.'VALUE'.and.ixyz.ne.1) then
- 7          CALL LineRead2 (11)
+            CALL LineRead2 (11)
             nint = natom*3-6
             if (natom.eq.2) nint=1
             do iread = 1 , nint
@@ -662,7 +663,7 @@ c              ifreq=0
  314           continue
                CALL LineRead (11)
 c                 write (6,990) word,word2,word3,word4,word5,'tw'
- 990           format (5a20)
+c 990           format (5a20)
                if (WORD.eq.'FREQUENCIES') then
                   OPEN (unit=65,status='unknown')
                   REWIND (65)
@@ -850,6 +851,7 @@ cc      if(ichecken.eq.0.and.gkeyword.ne.'level1')then
          endif
       endif
       
+
       if(ichecken.eq.0)then
          write(*,*)'did not found energy in the output'
          write(*,*)'or error of g09'
@@ -861,9 +863,9 @@ cc      if(ichecken.eq.0.and.gkeyword.ne.'level1')then
       RETURN
       END 
 
-      SUBROUTINE read_g09_ircout(natom,iread,numpointsf,numpointsb,
-     $ atgeom_me,
-     $ grad,force_con,ifcread,rc_ene,rc_coord)
+      SUBROUTINE read_g09_ircout(force_con,
+     $  natom,iread,numpointsf,numpointsb,atgeom_me,
+     $  ifcread,rc_ene,rc_coord,grad)
 
       implicit double precision (a-h,o-z)
       implicit integer (i-n)
@@ -880,23 +882,22 @@ c
       character*180 command1
 
       character*80 atgeom_me(natommx,nircmx)
-      character*100 force_con(3*natommx*3*natommx/10,nircmx)
-      character*100 grad(natommx,nircmx)
+      character*80 force_con(3*natommx*3*natommx/10,nircmx)
+      character*80 grad(natommx,nircmx)
       character*2 aname
       character*20 filename
       character*20 step(nircmx)
       character*30 cjunk
 
-
       LOGICAL leof,lsec,ltit
 
-      CHARACTER*160 line,sename,string,word,word2,word3
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
+
       character*20 ct1,ct2,ct3
       include 'filcomm.f'
  
-
-
 c
       call LineRead(0)
 
@@ -913,6 +914,10 @@ c
      $            ./irc_g09.log'
          call commrun(command1)
       endif
+
+c         write(*,*)'ok up to here cc3'
+c         stop
+
 
       open (unit=108,status='unknown')
       write (108,1200)natom+6
@@ -1247,8 +1252,10 @@ cc now get energies along reaction coordinate
       character*120 command1
       LOGICAL leof,lsec,ltit
 
-      CHARACTER*160 line,sename,string,word,word2,word3
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
+
       include 'filcomm.f'
 
       open(unit=99,file='temp.tmp',status='unknown')
@@ -1358,7 +1365,8 @@ cc now get energies along reaction coordinate
       character*120 command1
       LOGICAL leof,lsec,ltit
 
-      CHARACTER*160 line,sename,string,word,word2,word3
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
 
       include 'filcomm.f'
@@ -1436,7 +1444,8 @@ c      stop
       character*120 command1
       LOGICAL leof,lsec,ltit
 
-      CHARACTER*160 line,sename,string,word,word2,word3
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
 
       include 'filcomm.f'

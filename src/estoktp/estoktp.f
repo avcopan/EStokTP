@@ -54,7 +54,8 @@ c	for this will need to have some specificiation of additional torsional degrees
       implicit integer (i-n)
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
       character*100 command1
       character*30 gmemlow,gmemhigh
@@ -914,7 +915,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       character*30 distname
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
 
       include 'filcomm.f'
@@ -1606,7 +1609,8 @@ c         call commrun(command1)
  1113    format ('cp -f optgeom.tmp output/'A5,'_opt_',I0.2,'.out',60X)
  1020    format (A70)
 
-  400    continue
+         continue
+
 
 c check to see if this is also a new energy
          inew = 1
@@ -1706,7 +1710,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       character*100 commandcopy
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
 
       include 'filcomm.f'
@@ -2069,7 +2075,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       character*30 dih_rot
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
 
       include 'filcomm.f'
@@ -2478,7 +2486,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       character*100 commandcopy
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
 
       include 'filcomm.f'
@@ -2739,7 +2749,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       character*30 dih_rot
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
 
       include 'filcomm.f'
@@ -3256,7 +3268,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       character*100 commandcopy
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
 
       include 'filcomm.f'
@@ -3527,7 +3541,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       character*40 cjunk
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
 
       include 'filcomm.f'
@@ -4120,7 +4136,7 @@ c         call commrun(command1)
 
  1020       format (A70)
             
-  400       continue
+            continue
 c check to see if this is also a new energy
             inew = 1
             if (noptg.gt.1) then
@@ -4338,7 +4354,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       dimension taumn(ntaumx),taumx(ntaumx)
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
 
       include 'filcomm.f'
@@ -6079,7 +6097,9 @@ cc    this is the hindered rotor section
       character*30 gmem
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
 
       include 'filcomm.f'
@@ -7866,7 +7886,9 @@ cc    this is the multi dimensional hindered rotor section
       character*100 buffer
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
 
       include 'filcomm.f'
@@ -10941,7 +10963,9 @@ c      dimension gelec(nelecmx),eelec(nelecmx)
       character*100 word_sym
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
 
       include 'filcomm.f'
@@ -11639,8 +11663,8 @@ c      character*70 comline3,comline4
       character*80 atgeom_me(natommx,nircmx)
       character*100 atgeom_pr(natommx,nircmx)
 cc dimension of this matrix should be double checked
-      character*100 force_con(3*natommx*3*natommx/10,nircmx)
-      character*100 grad(natommx,nircmx)
+      character*80 force_con(3*natommx*3*natommx/10,nircmx)
+      character*80 grad(natommx,nircmx)
       character*100 gradts(natommx)
 cc      character*20 rc_coord(nircmx)
       character*20 step(nircmx)
@@ -11652,7 +11676,9 @@ cc      character*20 rc_coord(nircmx)
 
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
 
       include 'filcomm.f'
@@ -11955,9 +11981,13 @@ cc now do the backward step
             endif
          endif
 
-         call read_g09_ircout(natom,iread,numpointsf,numpointsb,
-     $        atgeom_me,
-     $        grad,force_con,ifcread,rc_ene,rc_coord)
+
+         call read_g09_ircout(force_con,natom,iread,numpointsf,
+     $  numpointsb,
+     $  atgeom_me,ifcread,rc_ene,rc_coord,grad)
+
+c         write(*,*)'ok up to here cc2'
+c         stop
 
       endif
       
@@ -13357,8 +13387,11 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       dimension taumn(ntaumx),taumx(ntaumx)
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
+
       character *30 code_name
 
       include 'filcomm.f'
@@ -14180,8 +14213,10 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       character*300 command1
       character*80 cread
       character*20 cread1,cread2
-      character*160 line,sename,string,word,word2,word3,title,title1,
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
+
       character*30 gmem
       character*20 stoich_well
       character*20 filewell
@@ -15807,8 +15842,11 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
+
       character*60 atomlabel(natommx)
       character*30 intcoor(3*natommx)
       character*30 gmem
@@ -16312,8 +16350,11 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      $ abcrot(ndim),xintt(3*natommx)
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
+
       character*60 atomlabel(natommx)
       character*60 atomlabel1(natommx)
       character*30 intcoor(3*natommx)
@@ -16676,8 +16717,11 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      $ abcrot(ndim),xintt(3*natommx)
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
+
       character*60 atomlabel(natommx)
       character*60 atomlabel1(natommx)
       character*30 intcoor(3*natommx)
@@ -16853,7 +16897,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       dimension natomnumb(natommx)
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
 
       character*20 filename
@@ -17112,8 +17158,10 @@ c      dimension natomnumb(natommx)
 
 
       LOGICAL leof,lsec,ltit
-      CHARACTER*160 line,sename,string,word,word2,word3,title,title1,
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
      $ word4,word5,word6,word7
+
       character*20 bname(natommx),anname(natommx),dname(natommx)
      $ ,atname(natommx),bconnt(natommx),aconnt(natommx),dconnt(natommx)
 
