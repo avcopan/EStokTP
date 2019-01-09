@@ -451,11 +451,11 @@ C     Find the first nonblank character in the line
 
  20   IP = IP + 1
       IF (((STRING(IP:IP).EQ.' ').OR.(STRING(IP:IP).EQ.'        '))
-     &     .AND.(IP .Lt. 80)) GO TO 20           
+     &     .AND.(IP .Lt. 100)) GO TO 20           
 
 C     If it  is all blank or is a comment line then read the next line
 
-      IF (IP .ge. 80 .OR. STRING(IP:IP) .EQ. '!')  GO TO 10
+      IF (IP .ge. 100 .OR. STRING(IP:IP) .EQ. '!')  GO TO 10
 
 C     If it is a title line write it and read next line.
 
@@ -476,7 +476,7 @@ C     in a nonblank noncomment line
 
       ICOM = IP 
  50   ICOM = ICOM + 1
-      IF (LINE(ICOM:ICOM) .NE. '!' .AND. ICOM .LT. 80)  GOTO 50      
+      IF (LINE(ICOM:ICOM) .NE. '!' .AND. ICOM .LT. 100)  GOTO 50      
 
  55   IF (IP .LT. ICOM) THEN
          IBEG = IP
@@ -588,7 +588,7 @@ c     keyword common block
       common /nkey/ nword
 
       LINE = STRING
-      DO 10 I = 1, 80
+      DO 10 I = 1, 100
          XLETT = LINE(I:I)
          ITRY = ICHAR (XLETT)
          IF (XLETT .GE. 'a' .AND. XLETT .LE. 'z') THEN 

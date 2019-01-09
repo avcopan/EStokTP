@@ -44,8 +44,10 @@ c     character*160 cname
 
       logical leof,lsec,ltit
 
-      character*160 line,sename,string,word,word2,word3
+      character*1000 line,string
+      character*160 sename,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
+
       character*20 ct1,ct2,ct3
 
 c      COMMON /keyword/ leof,lsec,ltit

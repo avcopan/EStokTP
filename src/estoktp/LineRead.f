@@ -1,4 +1,3 @@
-
       SUBROUTINE LineRead(IUnit)
 
 C     Subroutine reads the next non-blank non-comment line from IUNIT.
@@ -20,7 +19,8 @@ C     If end of file is detected LEOF is set to .TRUE.
 
 
       logical leof,lsec,ltit
-      character*160 line,sename,string,word,word2,word3,title,title1
+      character*1000 line,string
+      character*160 sename,word,word2,word3,title,title1
      #,word4,word5,word6,word7
 
       include 'filcomm.f'
@@ -41,7 +41,7 @@ cc
       LEOF = .FALSE.
       LTIT=.FALSE.
 
- 10   READ(iunit,'(A160)',END=9000) STRING
+ 10   READ(iunit,'(A1000)',END=9000) STRING
 c     write (6,*) 'string test',string
 
       IP = 0
@@ -51,11 +51,11 @@ C     Find the first nonblank character in the line
 
  20   IP = IP + 1
       IF (((STRING(IP:IP).EQ.' ').OR.(STRING(IP:IP).EQ.'	'))
-     &     .AND.(IP .Lt. 80)) GO TO 20           
+     &     .AND.(IP .Lt. 1000)) GO TO 20           
 
 C     If it  is all blank or is a comment line then read the next line
 
-      IF (IP .ge. 80 .OR. STRING(IP:IP) .EQ. '!')  GO TO 10
+      IF (IP .ge. 1000 .OR. STRING(IP:IP) .EQ. '!')  GO TO 10
 
 C     If it is a title line write it and read next line.
 
@@ -76,7 +76,7 @@ C     in a nonblank noncomment line
 
       ICOM = IP 
  50   ICOM = ICOM + 1
-      IF (LINE(ICOM:ICOM) .NE. '!' .AND. ICOM .LT. 80)  GOTO 50      
+      IF (LINE(ICOM:ICOM) .NE. '!' .AND. ICOM .LT. 1000)  GOTO 50      
 
  55   IF (IP .LT. ICOM) THEN
          IBEG = IP
@@ -189,7 +189,8 @@ C     If end of file is detected LEOF is set to .TRUE.
 c     keyword common block
 
       logical leof,lsec,ltit
-      character*160 line,sename,string,word,word2,word3,title,title1
+      character*1000 line,string
+      character*160 sename,word,word2,word3,title,title1
      #,word4,word5,word6,word7
 
       include 'filcomm.f'
@@ -199,7 +200,7 @@ c     keyword common block
       LEOF = .FALSE.
       LTIT=.FALSE.
 
- 10   READ(iunit,'(A160)',END=9000) STRING
+ 10   READ(iunit,'(A1000)',END=9000) STRING
 c     write (6,*) 'string2 test',string
 
       IP = 0
@@ -209,11 +210,11 @@ C     Find the first nonblank character in the line
 
  20   IP = IP + 1
       IF (((STRING(IP:IP).EQ.' ').OR.(STRING(IP:IP).EQ.'        '))
-     &     .AND.(IP .Lt. 80)) GO TO 20           
+     &     .AND.(IP .Lt. 1000)) GO TO 20           
 
 C     If it  is all blank or is a comment line then read the next line
 
-      IF (IP .ge. 80)  GO TO 10
+      IF (IP .ge. 1000)  GO TO 10
 
 C     If it is a title line write it and read next line.
 
@@ -234,7 +235,7 @@ C     in a nonblank noncomment line
 
       ICOM = IP 
  50   ICOM = ICOM + 1
-      IF (ICOM .LT. 80)  GOTO 50      
+      IF (ICOM .LT. 1000)  GOTO 50      
 
  55   IF (IP .LT. ICOM) THEN
          IBEG = IP
@@ -343,7 +344,8 @@ C     If end of file is detected LEOF is set to .TRUE.
 c     keyword common block
 
       logical leof,lsec,ltit
-      character*160 line,sename,string,word,word2,word3
+      character*1000 line,string
+      character*160 sename,word,word2,word3
       character*160 title,title1,word4,word5,word6,word7
 
       include 'filcomm.f'
@@ -367,7 +369,7 @@ c     keyword common block
       LEOF = .FALSE.
       LTIT=.FALSE.
 
- 10   READ(iunit,'(A160)',END=9000) STRING
+ 10   READ(iunit,'(A1000)',END=9000) STRING
 c     write (6,*) 'string2 test',string
 
       IP = 0
@@ -377,11 +379,11 @@ C     Find the first nonblank character in the line
 
  20   IP = IP + 1
       IF (((STRING(IP:IP).EQ.' ').OR.(STRING(IP:IP).EQ.'        '))
-     &     .AND.(IP .Lt. 80)) GO TO 20           
+     &     .AND.(IP .Lt. 1000)) GO TO 20           
 
 C     If it  is all blank or is a comment line then read the next line
 
-      IF (IP .ge. 80)  GO TO 10
+      IF (IP .ge. 1000)  GO TO 10
 
 C     If it is a title line write it and read next line.
 
@@ -402,7 +404,7 @@ C     in a nonblank noncomment line
 
       ICOM = IP 
  50   ICOM = ICOM + 1
-      IF (ICOM .LT. 80)  GOTO 50      
+      IF (ICOM .LT. 1000)  GOTO 50      
 
  55   IF (IP .LT. ICOM) THEN
          IBEG = IP
@@ -533,7 +535,8 @@ C     by Rozeanne Steckler
 c     keyword common block
 
       logical leof,lsec,ltit
-      character*160 line,sename,string,word,word2,word3,title,title1,
+      character*1000 line,string
+      character*160 sename,word,word2,word3,title,title1,
      #word4,word5,word6,word7
       common /keyword/ leof,lsec,ltit
       common /key/ line,sename,string,word,word2,word3,word4,word5,
@@ -541,7 +544,7 @@ c     keyword common block
       common /nkey/ nword
 
       LINE = STRING
-      DO 10 I = 1, 80
+      DO 10 I = 1, 1000
          XLETT = LINE(I:I)
          ITRY = ICHAR (XLETT)
          IF (XLETT .GE. 'a' .AND. XLETT .LE. 'z') THEN 

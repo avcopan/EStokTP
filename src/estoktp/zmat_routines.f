@@ -30,7 +30,8 @@ c      integer ibconn
       character*5 ccheck
       LOGICAL leof,lsec,ltit
 
-      CHARACTER*160 line,sename,string,word,word2,word3
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
       character*20 ct1,ct2,ct3
       include 'filcomm.f'
@@ -182,8 +183,10 @@ c
       LOGICAL leof,lsec,ltit
       character*60 atomlabel(natommx)
 
-      CHARACTER*160 line,sename,string,word,word2,word3
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
+
 
 c      include 'filcomm.f'
 
@@ -770,8 +773,8 @@ cc and abcd dihedral angle
       include 'param_estoktp.fi'
 c     
       LOGICAL leof,lsec,ltit
-
-      CHARACTER*160 line,sename,string,word,word2,word3
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
 
 c      include 'filcomm.f'
@@ -1028,7 +1031,8 @@ c
 
       LOGICAL leof,lsec,ltit
 
-      CHARACTER*160 line,sename,string,word,word2,word3
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
 
 c      include 'filcomm.f'
@@ -1205,7 +1209,8 @@ cc are known
 c     
       LOGICAL leof,lsec,ltit
 
-      CHARACTER*160 line,sename,string,word,word2,word3
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
 
 c      include 'filcomm.f'
@@ -1383,15 +1388,16 @@ c
 c     
       LOGICAL leof,lsec,ltit
 
-      CHARACTER*160 line,sename,string,word,word2,word3
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
 
 c      include 'filcomm.f'
-      pi=3.14159265359
+c      pi=3.14159265359
       alfa=pigr*alfa/180.
 
-      da1=db*cos(pi-alfa)
-      db1=db*sin(pi-alfa)
+      da1=db*cos(pigr-alfa)
+      db1=db*sin(pigr-alfa)
 
       dc=sqrt((da+da1)**2+db1**2)
 
@@ -1410,7 +1416,8 @@ c
 c     
       LOGICAL leof,lsec,ltit
 
-      CHARACTER*160 line,sename,string,word,word2,word3
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
 
 c      include 'filcomm.f'
@@ -1442,7 +1449,8 @@ c
 
       LOGICAL leof,lsec,ltit
 
-      CHARACTER*160 line,sename,string,word,word2,word3
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3
      $ ,title,title1,word4,word5,word6,word7
 
 c      include 'filcomm.f'
