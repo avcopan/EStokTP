@@ -1,9 +1,8 @@
 project(EStokTP C Fortran)
 cmake_minimum_required(VERSION 2.8)
-find_package(Threads)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Wall -fno-leading-underscore")
-set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Wall -fno-leading-underscore -fno-stack-protector -fno-openmp")
+set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Wall -fno-stack-protector -fno-openmp")
 
 add_library(estoktp
     ${PROJECT_SOURCE_DIR}/src/estoktp/g09fopt.f
