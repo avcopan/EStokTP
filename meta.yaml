@@ -11,4 +11,7 @@ requirements:
         - {{ compiler('c') }}
         - {{ compiler('fortran') }}
     run:
+        - cmake
+        - {{ compiler('c') }}
+        - {{ compiler('fortran') }}
         - mess

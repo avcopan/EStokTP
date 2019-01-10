@@ -1,0 +1,10 @@
+name: estoktp-env
+
+channels:
+    - pacchem
+
+dependencies:
+    - cmake
+    - gcc_linux-64
+    - gfortran_linux-64
+    - pacchem::mess
