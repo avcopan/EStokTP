@@ -628,7 +628,7 @@ c reoptimize at higher level
          call level1(ispecies)
       endif
 
-c determine B matrix for slected species
+c determine B matrix for selected species
       if (ibmat_reac1.eq.1) then
          if (idebug.ge.1) write (6,*) 'computing reac1 bmat'
          ispecies=1
@@ -5816,6 +5816,27 @@ c         call commrun(command1)
             endif
          enddo
 
+cc here check if all frequencies for a TS are positive, in which case it eliminates the smallest
+         freqmin=0.
+         if (ispecies.eq.0)then
+            if(jt.eq.nfreq)then
+               freqmin=freqp(1)
+               ifreqmin=1
+               do j=2,nfreq
+                  if(freqp(j).lt.freqmin)then
+                     ifreqmin=j
+                  endif
+               enddo
+               indfr=0
+               do j=1,nfreq
+                  if(j.ne.ifreqmin)then
+                     indfr=indfr+1
+                     freqp(indfr)=freqp(j)
+                  endif
+               enddo
+               jt=nfreq-1
+            endif
+         endif
          write (19,*) '    Frequencies[1/cm] ',jt
 
          if(ispecies.eq.0)then
@@ -13520,14 +13541,109 @@ c      call LineRead (21)
             close(21)
             goto 999
          endif
+      else if (word3.eq.'RESCALE2'.and.ispecies.eq.0)then
+         open (unit=99,file='./me_files/reac1_en.me',status='old')
+         read(99,*)hl_react_en
+         close(99)
+         open (unit=99,file='./me_files/prod1_en.me',status='old')
+         read(99,*)hl_prod1_en
+         close(99)
+         open (unit=99,file='./me_files/prod2_en.me',status='old')
+         read(99,*)hl_prod2_en
+         close(99)
+         open (unit=99,file='./geoms/tsgta_l1.xyz',status='old')
+         read(99,*)
+         read(99,*)ts_en_l1
+         close(99)
+         open (unit=99,file='../100/geoms/tsgta_l1.xyz',status='old')
+         read(99,*)
+         read(99,*)prod_en_l1
+         close(99)
+         dhreaction=hl_prod2_en+hl_prod1_en-hl_react_en
+         ets_prod=ts_en_l1-prod_en_l1
+         hl_scaled_en=hl_react_en+dhreaction+ets_prod
+
+         write(66,*)' energy changes without ZPE corrections'
+         write(66,*)'DE HL is         ',(hl_prod1_en+hl_prod2_en
+     $      -hl_react_en)*627.5
+         write(66,*)'Eact with respect to prods ',ets_prod
+     $                             *627.5
+         write(66,*)'Scaled Eact is   ',(hl_scaled_en-hl_react_en)
+     $                             *627.5
+
+         open (unit=99,file='./me_files/ts_en.me',status='unknown')
+         write(99,*)hl_scaled_en
+         close(99)
+         close(21)
+
+cc now update ZPE of products using that of 100 separation 
+
+         command1='cp -f ../100/me_files/ts_zpe.me 
+     $     ./me_files/prod1_zpe.me'       
+         call commrun(command1)
+         open (unit=99,file='./me_files/prod2_zpe.me',status='unknown')
+         write(99,*)'0.'
+         close(99)
+
+         goto 999
+c      endif
+       else if (word3.eq.'RESCALE3'.and.ispecies.eq.0)then
+         open (unit=99,file='./me_files/reac1_en.me',status='old')
+         read(99,*)hl_react_en
+         close(99)
+         open (unit=99,file='./me_files/prod1_en.me',status='old')
+         read(99,*)hl_prod1_en
+         close(99)
+         open (unit=99,file='./me_files/prod2_en.me',status='old')
+         read(99,*)hl_prod2_en
+         close(99)
+         open (unit=99,file='./geoms/tsgta_l1.xyz',status='old')
+         read(99,*)
+         read(99,*)ts_en_l1
+         close(99)
+         open (unit=99,file='./geoms/prod1_l1.xyz',status='old')
+         read(99,*)
+         read(99,*)prod1_en_l1
+         close(99)
+         open (unit=99,file='./geoms/prod2_l1.xyz',status='old')
+         read(99,*)
+         read(99,*)prod2_en_l1
+         close(99)
+         prod_en_l1=prod1_en_l1+prod2_en_l1
+
+         dhreaction=hl_prod2_en+hl_prod1_en-hl_react_en
+         ets_prod=ts_en_l1-prod_en_l1
+         hl_scaled_en=hl_react_en+dhreaction+ets_prod
+
+         write(66,*)' energy changes without ZPE corrections'
+         write(66,*)'DE HL is         ',(hl_prod1_en+hl_prod2_en
+     $      -hl_react_en)*627.5
+         write(66,*)'Eact with respect to prods ',ets_prod
+     $                             *627.5
+         write(66,*)'Scaled Eact is   ',(hl_scaled_en-hl_react_en)
+     $                             *627.5
+
+         open (unit=99,file='./me_files/ts_en.me',status='unknown')
+         write(99,*)hl_scaled_en
+         close(99)
+         close(21)
+
+cc now update ZPE of products using that of 100 separation 
+
+c         command1='cp -f ../100/me_files/ts_zpe.me 
+c     $     ./me_files/prod1_zpe.me'       
+c         call commrun(command1)
+c         open (unit=99,file='./me_files/prod2_zpe.me',status='unknown')
+c         write(99,*)'0.'
+c         close(99)
+
+         goto 999
       endif
+
 
 c         read(99,*)
 c         read(99,*)l1_prod1_en
 c         close(99)
-
-
-
 
 cc now check for code specific/species specific input commands
 
@@ -15626,6 +15742,12 @@ cccccccccccccccccccccc
                call commrun(command1) 
 1125  format(" sed -ie 's/Barrier TS REACS WP/Barrier TS REACS PRODS/g'
      +    temp3.me")
+            else if(ipr1.eq.1)then
+               rewind (99)
+               write (99,1125) 
+               rewind (99)
+               read (99,1120) command1
+               call commrun(command1) 
             endif
          else if (nts.eq.2) then
             rewind (99)
@@ -15718,7 +15840,13 @@ c finally ready to write full me input and run mess
       if ((nts.eq.1).and.(iabs.eq.1))then
          write (99,1011)
       endif
-      if ((nts.eq.1).and.(iadd.eq.1)) write (99,1015)
+      if ((nts.eq.1).and.(iadd.eq.1)) then
+         if (ipr1.eq.1)then
+            write (99,1019)
+         else
+            write (99,1015)
+         endif
+      endif
       if ((nts.eq.1).and.(iiso.eq.1)) then
          if(ipw.eq.1) then
             write (99,1015)
@@ -15749,6 +15877,9 @@ c finally ready to write full me input and run mess
 
  1015 format ("cat ./data/me_head.dat ./reactants.me 
      +  ./wellp.me 
+     +  ./temp3.me > me_ktp.inp")
+ 1019 format ("cat ./data/me_head.dat ./reactants.me 
+     +  ./products.me 
      +  ./temp3.me > me_ktp.inp")
  1017 format ("cat ./data/me_head.dat ./reactants.me 
      +  ./products.me
