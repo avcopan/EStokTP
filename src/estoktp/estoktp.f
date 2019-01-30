@@ -115,6 +115,7 @@ c initializations
       ibmat_wellp=0
       ibmat_ts=0
       ibmat_test=0
+      iintfr_ts=0
       i1dtau_reac1=0
       i1dtau_reac2=0
       i1dtau_prod1=0
@@ -353,6 +354,10 @@ c      endif
       endif
       if (WORD.EQ.'BMAT_TEST') then
          ibmat_test=1
+         itotcalc=itotcalc+1
+      endif
+      if (WORD.EQ.'INTFREQ_TS') then
+         iintfr_ts=1
          itotcalc=itotcalc+1
       endif
       if (WORD.EQ.'1DTAU_REAC1') then
@@ -709,7 +714,14 @@ c determine 1-dimensional torsional potentials
          ispecies=0
          call onedtau(ispecies)
       endif
-c
+
+c determine vibrational frequencies of frozen TS in internal coordinates
+
+      if (iintfr_ts.eq.1) then
+         if (idebug.ge.1) write (6,*) 'computing intfreq ts'
+         call intfreq_ts
+      endif
+
 c determine multi-dimensional torsional potentials
       if (imdtau_reac1.eq.1) then
          if (idebug.ge.1) write (6,*) 'starting mdtau_reac1'
@@ -2084,6 +2096,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
 cc parameter initialization
       ires=1
+      ireac_geom=0
 
 c input data
 
@@ -2145,6 +2158,18 @@ c     natomt is to account for dummy atoms
       enddo
       read (25,*) icharge,ispin
       rewind(25)
+
+      do while (WORD.NE.'REAC_GEOM')
+         call LineRead (25)
+         if (WORD.EQ.'END') then
+            rewind(25)
+            goto 999
+         endif
+      enddo
+      read (25,*) ireac_geom
+      rewind(25)
+
+ 999   continue
 
       do while (WORD.NE.'LEVEL0')
          call LineRead (21)
@@ -2231,6 +2256,10 @@ cc now determine the structure with the minimum distance
          endif
       enddo
       write(26,*) 'the structure with the min dist is',iopt
+      if (ireac_geom.ne.0)then 
+         iopt=ireac_geom
+         write(26,*) 'forced from ts.dat the use of geom ',iopt
+      endif
 
 c      stop
 
@@ -4334,7 +4363,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       character*70 comline1,comline2
       character*70 comline3,comline4
-      character*85 geomline
+      character*70 geomline
       character*30 intcoor(3*natommx)
       character*60 atomlabel(natommx)
       character*100 command1
@@ -5392,10 +5421,10 @@ c         if (natom.ne.1) then
             open (unit=100,FILE='geom.xyz',status='unknown')
             do j=1,natom
                read (100,1001) geomline
-               write (16,*) geomline
+               write (16,1001) geomline
 c               if (ispecies.le.4) write (116,*) geomline
             enddo
- 1001       FORMAT (A85)
+ 1001       FORMAT (A70)
             close (unit=100,status='keep')
 c     command1='cat reac_1.me geom.xyz > temp.me'
 c     call commrun(command1)
@@ -5782,11 +5811,11 @@ c         call commrun(command1)
          open (unit=100,FILE='geom.xyz',status='unknown')
          do j=1,natom
             read (100,1002) geomline
-            write (16,*) geomline
+            write (16,1002) geomline
             if(ispecies.eq.0)write (18,*) geomline
             if(ispecies.eq.0)write (28,*) geomline
          enddo
- 1002    FORMAT (A85)
+ 1002    FORMAT (A70)
          close (unit=100,status='keep')
 c         command1='cat reac_1.me geom.xyz > temp.me'
 c         call commrun(command1)
@@ -13601,15 +13630,10 @@ c      endif
          read(99,*)
          read(99,*)ts_en_l1
          close(99)
-         open (unit=99,file='./geoms/prod1_l1.xyz',status='old')
+         open (unit=99,file='../100/geoms/tsgta_l1.xyz',status='old')
          read(99,*)
-         read(99,*)prod1_en_l1
+         read(99,*)prod_en_l1
          close(99)
-         open (unit=99,file='./geoms/prod2_l1.xyz',status='old')
-         read(99,*)
-         read(99,*)prod2_en_l1
-         close(99)
-         prod_en_l1=prod1_en_l1+prod2_en_l1
 
          dhreaction=hl_prod2_en+hl_prod1_en-hl_react_en
          ets_prod=ts_en_l1-prod_en_l1
@@ -13623,12 +13647,30 @@ c      endif
          write(66,*)'Scaled Eact is   ',(hl_scaled_en-hl_react_en)
      $                             *627.5
 
+cc now correct for ZPE differences at two levels of theory 
+
+         open (unit=99,file='./me_files/prod1_zpe.me',status='unknown')
+         read(99,*)prod1zpe_hl
+         close(99)
+         open (unit=99,file='./me_files/prod2_zpe.me',status='unknown')
+         read(99,*)prod2zpe_hl
+         close(99)
+         open (unit=99,file='../100/me_files/prod1_zpe.me',
+     +         status='unknown')
+         read(99,*)prod1zpe_cas
+         close(99)
+         open (unit=99,file='../100/me_files/prod2_zpe.me',
+     +         status='unknown')
+         read(99,*)prod2zpe_cas
+         close(99)
+         corr_en=prod1zpe_hl+prod2zpe_hl-prod1zpe_cas-prod2zpe_cas
+
          open (unit=99,file='./me_files/ts_en.me',status='unknown')
-         write(99,*)hl_scaled_en
+         write(99,*)hl_scaled_en+corr_en
          close(99)
          close(21)
+         write(66,*)'ZPE REF-CAS correction energy (Hartree) ',corr_en
 
-cc now update ZPE of products using that of 100 separation 
 
 c         command1='cp -f ../100/me_files/ts_zpe.me 
 c     $     ./me_files/prod1_zpe.me'       
@@ -19380,6 +19422,234 @@ c                  endif
  103  format ('cp -f cmat.dat output/'A8,'.dat')
  104  format (A100)
  105  format (10000(1X,1PE11.4))
+
+      return
+      end
+
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+      subroutine intfreq_ts
+
+      implicit double precision (a-h,o-z)
+      implicit integer (i-n)
+
+      include 'data_estoktp.fi'
+      include 'param_estoktp.fi'
+
+c      dimension natomnumb(natommx)
+      dimension igrouptot(nhindmx),ipivotA(nhindmx),ipivotB(nhindmx)
+      dimension ngroup(nhindmx,natommx)
+
+
+      LOGICAL leof,lsec,ltit
+      CHARACTER*1000 line,string
+      CHARACTER*160 sename,word,word2,word3,title,title1,
+     $ word4,word5,word6,word7
+
+      character*20 filename
+      character*20 stoichname
+      character*180 command1
+      character*30 cjunk
+
+      include 'filcomm.f'
+
+      command1='cp -f output/tsgta_bm.dat ./bmat.dat'
+      call commrun(command1)
+
+      command1='cp -f output/tsgta_cm.dat ./cmat.dat'
+      call commrun(command1)
+
+      open (unit=25,file='./data/reac1.dat',status='old')
+      do while (WORD.NE.'NATOM')
+         call LineRead (25)
+         if (WORD.EQ.'END') then
+            write (96,*) 'natom in reac1 must be defined'
+            stop
+         endif
+      enddo
+      read (25,*) natom1,natomt1
+      close (25)
+
+cc get data from react2 file
+      if(iadd.eq.1.or.iabs.eq.1)then
+         call LineRead (0)
+
+         open (unit=25,file='./data/reac2.dat',status='old')
+
+c     natomt is to account for dummy atoms
+         do while (WORD.NE.'NATOM')
+            call LineRead (25)
+            if (WORD.EQ.'END') then
+               write (96,*) 'natom must be defined'
+               stop
+            endif
+         enddo
+         read (25,*) natom2,natomt2
+         close (25)
+      endif
+
+      if(iabs.eq.1.or.iadd.eq.1)then
+         natom = natom1+natom2
+      else if (iiso.eq.1.or.ibeta.eq.1) then
+         natom = natom1
+      endif
+
+      if (iadd.eq.1) natomt = natomt1+natomt2
+      if (iabs.eq.1) natomt = natomt1+natomt2+1
+      if (iiso.eq.1) natomt = natomt1
+      if (ibeta.eq.1) natomt = natomt1
+
+      open (unit=15,file='./data/ts.dat',status='unknown')
+      do while (WORD.NE.'NHIND')
+         call LineRead (15)
+         if (WORD.EQ.'END') then
+            write (96,*) 'hind rotors must be defined'
+            stop
+         endif
+      enddo
+      read (15,*) nhind
+      close (15)
+
+
+      open (unit=133,file='RPHt_input_data1.dat',status='unknown')
+c         open (unit=134,file='./data/hind_rot_head.dat',
+c     +         status='unknown')
+
+      write(133,*)'Number_of_Atoms: ',natom
+      write(133,*)'Act_energy(kcal/mol):       0. '
+      write(133,*)'Initial_Temperature:        200'
+      write(133,*)'Temperature_steps:          40'
+      write(133,*)'Temperature_increment:      40'
+      write(133,*)'Delta_Energy_rea:           0.'
+      write(133,*)'Delta_Energy_pro:           0.'
+      write(133,*)'Maxstep:                    1'
+      write(133,*)'Npointsint:                 5 '
+      write(133,*)'Maxtdev:                    0.5'
+      write(133,*)'Rearrange(1=yes,0=no)       1'
+      write(133,*)'SaddlePoint                 1'
+      write(133,*)'internalcoord(1=yes)     1'            
+      write(133,*)'isct_vtst(1=vtst_sct,0=sct) 1'
+      write(133,*)'zerocurvature(1)            0'
+      write(133,*)'reduced_mass                1.0'
+      write(133,*)'minimum_frequency            50'
+      write(133,*)'anim_freq(if_Maxstep=1)       2'
+      write(133,*)'onlyrotors(0=yes,1=no)        0'
+
+      if(nhind.ne.0) then
+         open (unit=15,file='./output/hrdata4proj_ts.dat'
+     $        ,status='unknown')
+         read (15,*)cjunk
+         write (133,*)'proj_rea_coo(0=yes(def),1=no) ',1
+         read (15,*)cjunk,nhind
+         write (133,*)cjunk,nhind
+
+         do ir=1,nhind
+            read (15,*)cjunk,ipivotA(ir)
+            write (133,*)cjunk,ipivotA(ir)
+            read (15,*)cjunk,ipivotB(ir)
+            write (133,*)cjunk,ipivotB(ir)
+            read (15,*)cjunk,igrouptot(ir)
+            write (133,*)cjunk,igrouptot(ir)
+            read (15,*)cjunk,(ngroup(ir,igr),igr=1,
+     $           igrouptot(ir))
+            write (133,*)cjunk,(ngroup(ir,igr),igr=1,
+     $           igrouptot(ir))
+
+         enddo
+         close(15)
+      else
+         if(inumpoints.eq.numpointsf+1)then
+            write (133,*)'proj_rea_coo(0=yes(def),1=no) ',1
+         else
+            write (133,*)'proj_rea_coo(0=yes(def),1=no) ',iprojrcoo
+         endif
+         write (133,*)'numrotors ',0
+      endif
+      close(133)
+
+      open(unit=99,file='extract_fcts.sh',status='unknown')
+
+      write(99,*)'#! /bin/sh'
+      write(99,*)'Atoms=$1'
+      write(99,*)'let "FCread=0"'
+      write(99,*)'let "FCreadmax = $Atoms*3/5"'
+      write(99,*)'for i in `seq 0 1 $FCreadmax`'
+      write(99,*)'do'
+      write(99,*)'let "FCread=$FCread+$Atoms*3-5*$i+1"'
+      write(99,*)'done'
+      write(99,*)'let "FCreadm1=$FCread-1"'
+      write(99,*)'let "Gread=$Atoms+2"'
+      write(99,*)'let "Sread=$Atoms+4"'
+      write(99,*)'echo $FCread'
+      write(99,*)'echo $Gread'
+      write(99,*)'echo $Sread'
+      write(99,*)'rm -f grad.txt'
+      write(99,*)'rm -f grad1.txt'
+      write(99,*)'rm -f grad2.txt'
+      write(99,*)'rm -f grada.txt'
+      write(99,*)'egrep -A$Gread "Forces " ./output/ts_fcmat.log 
+     + > grad1.txt'
+      write(99,*)'tail -$Atoms grad1.txt > grad2.txt'
+      write(99,*)'echo "gradient" >> grada.txt'
+      write(99,*)'cat grada.txt grad2.txt >> grad.txt'
+      write(99,*)'rm -f grad1.txt'
+      write(99,*)'rm -f grad2.txt'
+      write(99,*)'rm -f grada.txt'
+      write(99,*)'rm -f force_constants2.txt '
+      write(99,*)'rm -f force_constants1.txt '
+      write(99,*)'rm -f force_constants.txt '
+      write(99,*)'rm -f hessa.txt'
+      write(99,*)'egrep -A$FCread 
+     + "Force constants in Cartesian coordinates" 
+     +  ./output/ts_fcmat.log > force_constants1.txt '
+      write(99,*)'tail -$FCread force_constants1.txt  > 
+     +   force_constants2.txt'
+      write(99,*)"sed -ie 's/D/E/g' force_constants2.txt"
+      write(99,*)'echo "Hessian " >> hessa.txt  '
+      write(99,*)"cat hessa.txt force_constants2.txt >>" 
+     +    ,"force_constants.txt"
+      write(99,*)'rm -f force_constants1.txt '
+      write(99,*)'rm -f force_constants2.txt '
+      write(99,*)'rm -f force_constants2.txte '
+      write(99,*)'rm -f hessa.txt'
+      write(99,*)'rm -f geometries1.txt'
+      write(99,*)'rm -f geom.txt'
+      write(99,*)'rm -f geoma.txt'
+      write(99,*)'rm -f geomb.txt'
+      write(99,*)'egrep -A$Sread "Input orientation" 
+     + ./output/ts_fcmat.log > geometries1.txt'
+      write(99,*)'echo "Step 1 " >> geoma.txt  '
+      write(99,*)'echo "geometry " >> geoma.txt  '
+      write(99,*)'tail -$Atoms geometries1.txt > geomb.txt'
+      write(99,*)'cat geoma.txt geomb.txt >> geom.txt'
+      write(99,*)'rm -f geoma.txt'
+      write(99,*)'rm -f geomb.txt'
+      write(99,*)'rm -f geometries1.txt'
+      write(99,*)"echo 'Number_of_Atoms:        ' $Atoms > temp.log"
+      write(99,*)'cat   RPHt_input_data1.dat geom.txt grad.txt 
+     +  force_constants.txt > RPHt_input_data.dat'
+      write(99,*)'rm -f geom.txt'
+c      write(99,*)'rm -f grad.txt'
+c      write(99,*)'rm -f force_constants.txt'
+c      write(99,*)'rm -f temp.log'
+      close(99)
+
+      command1='chmod +x extract_fcts.sh'
+      call commrun(command1)
+c      stop
+
+      open(unit=99,status='unknown')
+      write (99,2000)'./extract_fcts.sh', natom
+      rewind (99)
+      read (99,2001) command1
+      close (99)
+      call commrun(command1)
+      stop
+      command1='RPHt.exe'
+      call commrun(command1)
+
+ 2000    format (A80,1X,I10)
+ 2001    format (A160)
 
       return
       end
