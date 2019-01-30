@@ -26,6 +26,7 @@ c     parameter (ntaumx=10, nmdmx=300, natommx=100, ndim=3)
       dimension freq(nmdmx),tau(ntaumx),tauopt(ntaumx)
       dimension coord(natommx,ndim),xint(3*natommx),abcrot(ndim)
       dimension coox(natommx),cooy(natommx),cooz(natommx)
+      dimension gradx(natommx),grady(natommx),gradz(natommx)
       character*160 stringr
       character*70 comline1
       character*100 command1
@@ -326,7 +327,7 @@ cc then get and write xyz coordinates
       enddo
       do j=1,natom
          read(100,*)atomtype(j),djunk,djunk,coox(j),cooy(j),cooz(j)
-         write(101,*)atomtype(j),coox(j),cooy(j),cooz(j)
+         write(101,1204)atomtype(j),coox(j),cooy(j),cooz(j)
          coord(j,1)=coox(j)
          coord(j,2)=cooy(j)
          coord(j,3)=cooz(j)
@@ -334,6 +335,8 @@ cc then get and write xyz coordinates
       write(101,*)
       close(100)
       close(101)
+
+ 1204    format(1X,A2,1X,F9.5,1X,F9.5,1X,F9.5)
 
 cc now read frequencies, if computed
 
@@ -369,7 +372,7 @@ c            write(*,*)'freq ',j,' is ',freqread
             if(freqread.gt.0.5)then
                index=index+1
                freq(index)=freqread
-cc now assign negavtive value to imaginary frequency
+cc now assign negative value to imaginary frequency
                if(freq(index).lt.freq(index-1))then
                   freq(index-1)=-freq(index-1)
 c                  index=index-1
@@ -392,6 +395,7 @@ c         if(ispecies.eq.0)nfreq=nfreq-1
             write(*,*)'freq ',j,' is ',freq(j)
          enddo
          close(100)
+
 cc now proceed to saving the hessian
          open (unit=100,status='unknown',file='molpro.out')
          open (unit=101,status='unknown',file='fcmat.log')
@@ -454,6 +458,60 @@ c         numlines=numlines-1
             write(101,1002)j,ianumb,0,coox(j),cooy(j),cooz(j)
          enddo
 
+cc now save the gradient
+         open(unit=99,status='unknown') 
+         write(99,900)natom+3
+         rewind(99)
+         read(99,'(A100)')command1
+         call commrun(command1)
+
+         rewind(99)
+         write(99,901)natom+1
+         rewind(99)
+         read(99,'(A100)')command1
+         call commrun(command1)
+         close(99)
+
+         open(unit=100,file='end.log',status='unknown')
+         write(100,*)'End'
+         close(100)
+         
+         command1='cat grad2.txt end.log > grad.txt'
+         call commrun(command1)
+
+         command1='rm -f grad2.txt'
+         call commrun(command1)
+         command1='rm -f end.log'
+         call commrun(command1)
+
+cc count lines
+
+         icount=0
+         open(unit=100,file='grad.txt',status='unknown')
+         do while (WORD.NE.'END')
+            call LineRead(100)
+            icount=icount+1
+         enddo
+         write(*,*)'icount= ',icount
+         if(icount.eq.natom+1)then
+            rewind(100)
+            do j=1,natom
+               read(100,*)cjunk,gradx(j),grady(j),gradz(j)
+            enddo
+         else
+            write(101,*)'unable to read gradient'
+            write(101,*)'gradient set to 0.'
+            do j=1,natom
+               gradx(j)=0.
+               grady(j)=0.
+               gradz(j)=0.
+            enddo
+         endif
+
+ 900     format("egrep -A"I0.2 " 'GRADIENT FOR' molpro.log > 
+     +       grad1.txt")
+ 901     format("tail -n"I0.2 " grad1.txt > grad2.txt")
+
          write(101,*)
          write(101,*)
          write(101,*)'Forces '
@@ -486,7 +544,7 @@ c         numlines=numlines-1
             if(atomtype(j).eq.'Te')ianumb=52
             if(atomtype(j).eq.'I')ianumb=53
             if(atomtype(j).eq.'Xe')ianumb=54
-            write(101,1001)j,ianumb,0.000,0.000,0.000
+            write(101,1001)j,ianumb,gradx(j),grady(j),gradz(j)
          enddo
          write(101,*)
          write(101,*)
@@ -494,7 +552,7 @@ c         numlines=numlines-1
          close(101)
       endif
 
-1001  format(1X,I2,1X,I2,1X,3(1x,F9.4))
+1001  format(1X,I2,1X,I2,1X,3(1x,F11.6))
 1002  format(1X,I2,1X,I2,1X,I2,1X,3(1x,F9.4))
 
       write(6,*)'out of molprofopt' 

@@ -1,4 +1,4 @@
-c a set of programa to read and convert z-matrices
+c a set of programs to read and convert z-matrices
 c Copyright (C) 2018  by Carlo Cavallotti and Matteo Pelucchi, Politecnico di MIlano, Italy
 c and Stephen J. Klippenstein, Argonne National Laboratories, USA.
 c This program is free software: you can redistribute it and/or modify
@@ -600,9 +600,23 @@ c               close(23)
                ib=ibconn(i)
                ia=iaconn(i)
                id=idconn(i)
-               call xyz_to_zmat(cooxt(i),cooyt(i),coozt(i),cooxt(ib),
-     +              cooyt(ib),coozt(ib),cooxt(ia),cooyt(ia),coozt(ia),
-     +              cooxt(id),cooyt(id),coozt(id),ang,dihed) 
+               if(i.le.3)then
+c use fake coordinates to avoid overflow. Impacts dihedral, but only angle matters
+                  call xyz_to_zmat(cooxt(i),cooyt(i),coozt(i),cooxt(ib),
+     +                cooyt(ib),coozt(ib),cooxt(ia),cooyt(ia),coozt(ia),
+     +                cooxt(ia)+0.1,cooyt(ia)+0.1,coozt(ia)+0.1,ang,
+     +                dihed)                   
+               else
+                  call xyz_to_zmat(cooxt(i),cooyt(i),coozt(i),cooxt(ib),
+     +                cooyt(ib),coozt(ib),cooxt(ia),cooyt(ia),coozt(ia),
+     +                cooxt(id),cooyt(id),coozt(id),ang,dihed)                   
+               endif
+c               write(*,*)'ib is ',ib
+c               write(*,*)'ia is ',ia
+c               write(*,*)'id is ',id
+c               write(*,*)'i is ',i
+c               stop
+
                xint(j)=ang
 
             endif
