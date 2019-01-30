@@ -1,6 +1,7 @@
+# cmd: conda build . -c pacchem
 package:
     name: estoktp
-    version: "1.10.3"
+    version: "1.10.4"
 
 source:
     path: .
