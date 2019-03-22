@@ -3223,6 +3223,7 @@ void determine_top_atoms(int step){
   double dist_CH,dist_HC,dist_CO;
   double dist_OH,dist_HO;
   double dist_OO;
+  double dist_NO;
   double dist_CC;
   double dist_SH,dist_NH;
 
@@ -3238,6 +3239,7 @@ void determine_top_atoms(int step){
   dist_OO=1.6;
   dist_SH=1.5;
   dist_NH=1.3;
+  dist_NO=1.6;
 
   ItopA = (double *) malloc(numrotors*sizeof(double));
   ItopB = (double *) malloc(numrotors*sizeof(double));
@@ -3371,6 +3373,16 @@ void determine_top_atoms(int step){
 		igroupB[i][i2]=1;
 		nvar=nvar+1;
 	      }
+	      //check if N-O bond
+	      if((strcmp(atoms_data[i1].atom_name,"N")==0)&&(strcmp(atoms_data[i2].atom_name,"O")==0)&&(dist_matrix[i1][i2]<dist_CO)&&(igroupB[i][i2]!=1)&&(atomsintopB[i][i2]==1)){
+		  igroupB[i][i2]=1;
+		  nvar=nvar+1;
+		}
+	      //check if O-N bond
+	      if((strcmp(atoms_data[i1].atom_name,"O")==0)&&(strcmp(atoms_data[i2].atom_name,"N")==0)&&(dist_matrix[i1][i2]<dist_CO)&&(igroupB[i][i2]!=1)&&(atomsintopB[i][i2]==1)){
+		igroupB[i][i2]=1;
+		nvar=nvar+1;
+	      }
 	    }
 	  }
 	}
@@ -3465,6 +3477,16 @@ void determine_top_atoms(int step){
 		}
 	      //check if N-H bond
 	      if((strcmp(atoms_data[i1].atom_name,"N")==0)&&(strcmp(atoms_data[i2].atom_name,"H")==0)&&(dist_matrix[i1][i2]<dist_NH)&&(igroupA[i][i2]!=1)&&(atomsintopA[i][i2]==1)){
+		igroupA[i][i2]=1;
+		nvar=nvar+1;
+	      }
+	      //check if O-N bond
+	      if((strcmp(atoms_data[i1].atom_name,"N")==0)&&(strcmp(atoms_data[i2].atom_name,"O")==0)&&(dist_matrix[i1][i2]<dist_CO)&&(igroupA[i][i2]!=1)&&(atomsintopA[i][i2]==1)){
+		igroupA[i][i2]=1;
+		nvar=nvar+1;
+		}
+	      //check if N-O bond
+	      if((strcmp(atoms_data[i1].atom_name,"O")==0)&&(strcmp(atoms_data[i2].atom_name,"N")==0)&&(dist_matrix[i1][i2]<dist_CO)&&(igroupA[i][i2]!=1)&&(atomsintopA[i][i2]==1)){
 		igroupA[i][i2]=1;
 		nvar=nvar+1;
 	      }
@@ -3589,11 +3611,7 @@ void determine_top_atoms(int step){
     }
   }
 
-
   // of the two tops identified I take the one with the smallest inertia moment    
-
-  
-  
   int indred;
 
   indred=0;
@@ -3623,7 +3641,7 @@ void determine_top_atoms(int step){
   }
           
  
-  /*  
+  /*    
   for (i=0;i<numrotors;i++){
     for (j=0;j<ATOMS;j++){
             printf("igroup A value for rot %d natom %d is %d  \n",i,j,igroupA[i][j]); 
@@ -3634,9 +3652,9 @@ void determine_top_atoms(int step){
     for (j=0;j<ATOMS;j++){
 	    printf("igroup B value for rot %d natom %d is %d  \n",i,j,igroupB[i][j]); 
     }
-  }
+  } 
+    exit(0);
   */
-  //  exit(0);
 
 }
 
@@ -4085,6 +4103,7 @@ void projector_matrix_Rot(int step){
        	e31x=coords[j][0]-coords[pivotA[i]-1][0];
        	e31y=coords[j][1]-coords[pivotA[i]-1][1];
        	e31z=coords[j][2]-coords[pivotA[i]-1][2];
+
 	//e31x=coords[j][0]-cmAx[i];
 	//e31y=coords[j][1]-cmAy[i];
 	//e31z=coords[j][2]-cmAz[i];
@@ -4126,8 +4145,15 @@ void projector_matrix_Rot(int step){
     }
   }
   */
-
-  
+  /*
+  for(i=0; i<(int)(3*ATOMS); i++) {    
+    for(j=0; j<(int)(numrotors); j++) {    
+      printf("%le ",Dmatrot[i][j]);
+    }
+      printf("\n");
+  }
+  exit(0);
+  */
   // now convert the normal modes back to cartesian coord. Use the rototransl projection matrix
 
 
@@ -4294,8 +4320,14 @@ void projector_matrix_Rot(int step){
       FC_temprot[i][j]= FMIpro[i-1][j-1];
     }
   }
-
-
+  /*
+  for(i=1; i<(int)(dim); i++) {    
+    for(j=1; j<(int)(dim); j++) {    
+      printf("%lf ",FC_temprot[i][j]);
+    }
+      printf("\n");
+  }
+  */
   
   jacobi(FC_temprot, dim-1, lambdarot, Lrot, nrot);
   eigsrt(lambdarot, Lrot, dim-1);
